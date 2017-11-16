@@ -1,0 +1,67 @@
+Deleting f:\packmon\packmon.hpc
+     1 file(s) deleted         32,768 bytes freed
+f:\packmon\packmon.hpc => e:\helppc\packmon.txt
+     1 file(s) copied
+
+INDEXHLP 2.10       Help File Index Utility    Copyright (c) 1991 David Jurgens
+
+
+reading ASM.TXT...
+reading C.TXT...
+reading HARDWARE.TXT...
+reading INTERRUP.TXT...
+reading TABLES.TXT...
+reading MISC.TXT...
+reading PACKMON.TXT...
+reading HVA_UTIL.TXT...
+reading HVA_WIN.TXT...
+Too many Keys
+Incomplete Index generated
+
+sorting
+duplicate key: (null)
+duplicate key: call
+duplicate key: call_terminal
+duplicate key: deb(exp)
+duplicate key: deb(exp)
+duplicate key: deb(exp)
+duplicate key: DEBUG
+duplicate key: debug
+duplicate key: DEBUG
+duplicate key: FALSE
+duplicate key: FALSE
+duplicate key: fprintf
+duplicate key: help
+duplicate key: help.c
+duplicate key: main
+duplicate key: main
+duplicate key: MAIN_MODULE
+duplicate key: MAIN_MODULE
+duplicate key: MAIN_MODULE
+duplicate key: MAIN_MODULE
+duplicate key: MAIN_MODULE
+duplicate key: MAIN_MODULE
+duplicate key: MAIN_MODULE
+duplicate key: MAIN_MODULE
+duplicate key: MAIN_MODULE
+duplicate key: MAIN_MODULE
+duplicate key: MAIN_MODULE
+duplicate key: MAXID
+duplicate key: NR4NUMOPS
+duplicate key: SETUP
+duplicate key: sleep
+duplicate key: trimstr
+duplicate key: TRUE
+duplicate key: TRUE
+duplicate key: uchar(x)
+duplicate key: VERSION, writing index, done...
+
+Index requires 31878 bytes
+
+HelpTSR 2.10  Copyright (c) 1991 David Jurgens
+
+Removed from memory
+
+HelpTSR 2.10  Copyright (c) 1991 David Jurgens
+
+Successfully installed...  Activate using Ctrl-Kp5

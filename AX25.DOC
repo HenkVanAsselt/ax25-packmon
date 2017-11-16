@@ -1,0 +1,1075 @@
+Bron: PI4NYM
+Vertaling van: Wim PE1FIB
+Bewerkt door: Martin PA3AWG
+
+         CCITT: Comte Consultatif International Telegraphique et Telephinique
+           ISO: Internatinal Standards Organisation
+           EIA: Electronic Industries Association 
+
+
+ 
+                     Het AX 25.2 protocol
+
+Voorwoord.
+---------
+Velen houden zich bezig met packet-radio, slechts weinigen
+kennen de spelregels die in het protokol AX-25(-2) zijn verwerkt.
+Ik dacht dat het wel zinnig was om, althans een gedeelte,
+van deze regels eens wat nader te bekijken. In een aantal
+gevallen zal het wat 'taai' zijn, en in andere gevallen weer
+interessant. We zullen samen kijken wat voor ons amateurs nuttig
+en bruikbaar is om te weten. Hoeveel afleveringen deze
+behandeling in beslag zal nemen kan ik u nog niet zeggen, wel
+dat het er een  5 tal minstens gaan worden. Ik zal proberen, 
+voor zover mogelijk, nederlandse termen te gebruiken maar in een
+aantal gevallen zal dit onmogelijk zijn.                                        
+                
+succes ermee, wim pe1fib.
+        
+
+                      Het AX.25 protokol, deel 1.
+                      -------------------
+
+De hierna volgende verhandeling zal gaan over het AX-25 proto-
+col versie 2 voor amateur gebruik. Een protokol is een serie van
+regels die een betrouwbaar transport van data tussen twee punten
+veilig zal stellen. De aanduiding AX.25 betekent amateur-X25.
+Het is gebaseerd op het CCITT X.25 protokol-2, en is speciaal
+aangepast aan de eisen die bij gebruik in de amateurwereld nodig
+zijn. 
+
+Level 2 (niveau 2) is de laag die afgeleidt is van de ISO-7
+lagen model, die de transmissie tussen twee stations mogelijk
+maakt. (link-layer). Normale verbindingen worden dus op niveau 2
+gehouden, hogere niveaus zijn bijvoorbeeld de communicatie
+tussen net-rom,s (level 3). 
+Voor de volledigheid wordt in de volgende beschrijving ook het
+level 1 behandelt (physical layer). Dit niveau legt de
+physiek - elektrische en verloop eigenschappen vast, om de
+praktische verbinding tussen twee stations te maken, te behouden
+en weer af te breken. In de amateurwereld behoren hiertoe dus
+ook de zendfrequentie, de modulatie soort en de afsk tonen.
+(ook de zender en de interface of tnc! opm van bewerker.
+
+De versie.2 van dit protokol bevat ten opzichte van de oude
+versie.1 preciezere definities van de antwoord en kommando
+struktuur en de mogelijkheid om tot maximaal 8 digipeaters te
+werken die in dat adres veld kunnen worden aangegeven. 
+
+1. Condities voor de verbinding op niveau .1.
+als modulatiemiddel wordt, onafhankelijk van de modulatie-soort,
+NRZ1 gebruikt, tenminste tot snelheden van 1200 baud. Daarbij
+wordt een over te sturen 0-bit gezien als een wisseling tussen
+de toon of zendfrequentie (toon dus bij afsk, freq. wisseling 
+dus bij fsk ). Een 1-bit (hoog) dus, als een niet wisseling
+tussen beiden. Het is dus onzin om van mark en space te spreken
+bij packet-radio. De uitzending kan net zo goed met een hoge of
+met een lage toon beginnen.
+
+1.1 Frequencies boven 144 MHz.
+In dit frequentie bereik op het moment bijna uitsluitend FM     
+transceivers gebruikt met een kanaalafstand van 25 KHz. Met
+de modulatie soort F2B worden data met 1200 baud verzonden.
+De afsk tonen voldoen aan de bell-202 norm met 1200 en 2200 hz.
+Op frequenties boven 2 meter is gepland om uitzendingen te doen
+met hogere snelheden (9600 baud tot 64 kbaud) in de modulatie
+soort F1B.
+
+1.2 Frequenties onder 30 MHz.
+Voor verbindingen op HF wordt de modulatie soort F1B gebruikt         
+met een frequentie-zwaai van 200 Hz. en een snelheid van 300
+baud. Om de invloed van QRM zo klein mogelijk te houden moet het
+informatie veld op 64 bytes of korter gehouden worden.
+
+2. AX.25 link-layer protokol specificatie.
+
+2.1 Raam-functie en gebruik. 
+Het AX.25 protokol werd ontworpen om een betrouwbaar transport                  
+           
+van data tussen twee zendende eindpunten te bewerkstelligen,
+onafhankelijk van andere protokol-niveaux, die echter wel geim-
+plementeerd kunnen zijn, in het bijzonder onafhankelijk van
+diverse typen communicatie verbindingen op niveau 1. De
+definitie is dat dit protokol zowel voor half- alswel voor vol-
+duplex gebruikt kunnen worden in de amateur wereld en de
+mogelijkheid laten om te functioneren tussen enkelvoudige    
+amateurverbindingen en eveneens tussen multiport-controllers.
+
+Dit protokol voldoet aan de ISO aanbevelingen 3309, 4335 (in-
+clusief ad 1 en 2) en 6256 high-level data link control (HDLC)
+en gebruikt enige zaken van de in deze dokumenten gebruikte 
+terminologie. Ook voldoet het protokol aan de ANSI X3.66 normen
+welke de \adccp gebalanceerde mode beschrijft.
+
+Dit AX.25 protokol blijft binnen de normen van het CCITT X.25
+aanbevelingen, met uitzondering van een vergroot adresveld en de
+extra opgenomen ongenummerde informatie raam (frame) (ui).
+Het volgt ook het principe van de CCITT aanbeveling Q.921 (LAPD)
+bij gebruik van meerdere verbindingen, die zich, van elkaar
+onderscheiden door het adresveld, een enkel, meervoudig
+gebruikt communicatie kanaal delen.
+Dit protokol maakt het ook mogelijk om met meer als een(1) link-
+layer verbinding per apparaat te werken, als het apparaat
+daarvoor geschikt gemaakt is.
+Het protokol verhindert geen zelf-connects. Een zelf-connect
+verkrijgt men als men een verbinding opbouwt met een adres en
+afzender dat indentiek is. 
+
+De meeste link-layer protokols nemen aan dat een primair
+apparaat (engels:DCE, data communications equipment) met 
+een of meerdere secundaire apparaten  (DTE, data terminal 
+equipment) verbonden is. Deze vorm van bedrijf met niet
+gelijkwaardige partners is in de amateur-wereld niet
+gebruikelijk. Daarentegen wordt in het AX.25 protokol opgenomen
+dat beide einden van de verbinding gelijkwaardig zijn. Hierdoor
+vervallen de twee verschillende klassen van de apparatuur. In
+deze amateur versie wordt de term DXE (data switching equipment)
+gebruikt om de gelijkwaardigheid van de apparatuur te
+omschrijven, zoals die bij amateur-packet-radio gebruikelijk is.
+
+
+2.2. De opbouw van data-overdracht-blocs.
+Link-layer packet-radio uitzendingen worden in data-transmissie-
+blocs (frames) overgezonden. Elk bloc bestaat uit een aantal
+kleinere groepen, velden genoemd. Afbeelding 1 toont de opbouw
+van de drie basis-typen blocs. Let erop dat het eerst te zenden
+bit links staat.
+
+
+----------------------------------------------------------
+    flag      adres        control      fcs       flag
+----------------------------------------------------------
+ 01111110   112...560 bits  8  bits   16 bits    01111110
+----------------------------------------------------------
+
+afbeelding 1a de opbouw van een u en s bloc.
+
+Zowel in '1' alsmede in '2' worden de groepen van 8 bits als
+een  oktet (8-delig) aangeduid, om aan te geven dat HDLC als
+bit-georienteerd medium en onafhankelijk is van een
+bytestruktuur. In deze verhandeling wordt daarentegen het woord
+'byte' gebruikt omdat in het AX.25 protokol allereerst aan de
+transmissie van data-bytes gedacht is. In principe is echter 
+ook de overdracht mogelijk van niet-echte 8-bits data bytes. In          
+dit geval worden worden de bits, zonder te letten op de byte
+grenzen, in de i velden gestopt en aangevuld tot door 8 deelbare
+units. Elk veld bestaat uit een groot aantal bytes en vervullen
+de in de volgende hoofdstukken te behandelen functies.
+
+---------------------------------------------------------------
+  flag   adres    control     pid    info    fcs      flag
+---------------------------------------------------------------
+01111110 112-568  8-bits    8 bits  n8bits  16 bits 01111110
+           bits  
+---------------------------------------------------------------
+           de opbouw van een informatie-blok, afbeelding 1b
+        
+
+2.2.1. Blokbegrenzing (flag)
+
+Het blokbegrenzings-teken (flag) is een (1) byte lang en
+verschijnt in het begin en einde van een blok. Eeen enkele
+flag kan tegelijkertijd het einde van het ene blok zijn en  
+het begin van het volgende blok. Een flag bestaat uit een nul,
+gevolgd door 6 enen, gevolgd door weer een nul (01111110 is
+hex 7e ). Om te verhinderen dat deze volgorde ergens anders
+optreedt in een blok, gebruikt men het zogenaamde bit-stuffing
+(zie 2.2.6)(wegvegen van een bit)
+
+2.2.2. Adresveld
+
+Het adres veld wordt gebruikt om, zowel de afzender alsmede de
+ontvanger aan te geven. Aanvullend bevat dit veld de commando-
+antwoord informatie alsmede de info voor eventueel digipeater
+functie in level 2.
+De codering binnen het adresveld wordt in 2.2.13 uitgebreid
+beschreven.
+
+2.2.3 Controleveld.
+
+Het controle-veld (stuurveld) wordt gebruikt om het soort van
+het juist overgezonden blok aan te geven en om de status van de 
+niveau (level) 2 verbinding te controleren. Hij is een byte lang
+en de codering wordt in 2.3.2.1. besproken. 
+
+2.2.4. PID-veld.
+
+Het protokol indentifier veld (pid) moet alleen in informatie-
+bloks verschijnen (i en ui). het bepaalt welk soort layer-3
+gebruikt gaat worden. Het pid-veld telt bij de lengte van het
+info-veld niet mee. Het is als volgt gecodeerd:
+
+   M   L (het lsb is het eerst te zenden bit)
+   S   S
+   B   B
+yy01yyyy AX.25 laag 3 geimplementeerd.
+yy10yyyy AX.25 laag 3 geimplementeerd.
+11001100 internet protokol datagram laag 3 geimplementeerd
+11001101 adres resolatie protokol laag 3 geimplementeerd.
+11110000 geen laag drie implementatie.
+11111111 'uitvlucht-symbool' het volgende byte bevat verdere 
+         laag drie protokol informatie.                              
+
+Bij bovenstaande schema is y of een 1 of een 0.
+
+                 afbeelding 1c, het pid-veld. 
+
+Opmerking:
+Alle niet genoemde vormen yy00yyyy en yy11yyyy zijn voor
+toekomstige laag 3 protokols gereserveerd. De volgorde en
+betekenis is zaak van een overeenkomst tussen zendamateurs.
+Aanbevolen wordt om de ontwikkelingen van protokol-3-laag 
+in overleg te ontwikkelen met het ARRL ad-hoc commitee voor 
+digitale communicatie. 
+
+2.2.5 Informatie veld.
+
+Het informatie i-veld wordt gebruikt om de data van het ene eind
+naar het andere einde van een verbinding over te brengen.
+I-velden zijn maar in drie typen toelaatbaar en acceptabel,
+het i-frame, het ui-frame en het frmr-frame. Het i-frame 
+kan maximaal 256 bytes lang zijn en moet altijd een even aantal
+bytes bevatten. Deze beperkingen gelden als de in 2.2.6 genoemde
+i nul-bits nog niet zijn toegevoegd. De i-velden moeten zonder
+enige verandering overgebracht worden over de hele afstand
+tussen ontvanger en afzender, maar wel met de uitzondering
+genoemd in 2.2.6. (bit-stuffing). Deze is nodig om geen
+flag-bytes binnen het frame te krijgen. 
+
+Het informatieveld van de i- of van de ui- blokken bevat de
+over te brengen informatie. Zonder een hoger protokol niveau
+zijn dit de tekst-paketten die van het ene naar het andere
+station gezonden worden. In het andere geval (dus met hoger
+niveau) zijn het de verschillende typen paketten van hogere
+lagen. 
+
+2.2.6 Bit-stuffing
+
+Als beveiliging dat de bit volgorde van flag-bytes nergens
+binnen een block optreedt, moet een zendend station, binnen een
+block, elke keer na 5 achter elkaar komende '1' bits, een
+'0' bit toevoegen. Het ontvangende station moet elk
+toegevoegde '0' bit weer uit de data stroom halen, maar dan wel
+elke keer, exact na 5 opeenvolgende '1' bits.
+
+2.2.7 Block-controle-teken volgorde.
+
+De block-controle teken (FCS frame check sequence)
+is een zestien (16) bit lang getal, dat zowel van de afzender
+als door de ontvanger berekend wordt. Het moet de garantie
+geven, dat het block op zijn weg van de afzender naar de ontvan-       
+ger, niet door transmissie verminkt is. Het moet berekend worden
+met behulp van de ISO aanbeveling 3309 (HDLC).
+
+2.2.8 Overdracht volgorde van bits.
+
+Met uitzondering van het FCS-veld moeten alle velden van een
+AX.25 block met het laagst-waardige bit, het eerst uitgezonden
+worden. De FCS moet daarentegen met het hoogst-waardige bit 
+beginnen.
+
+2.2.9 Ongeldige blocks.
+
+Elk uit minder dan 136 bits (exclusief de vlaggen aan het begin
+en het einde) bestaande, of niet uit een even aantal bits
+bestaand block moet van de link-layer als ongeldig worden
+gezien. (zie hiervoor ook 2.4.4.4.)
+
+2.2.10 Block-afbreking.
+
+Als de uitzending van een block vroegtijdig afgebroken moet
+worden, moeten minstens 15 achter elkaar volgende '1' bits
+worden gezonden, zonder bit-stuffing.
+
+2.2.11 Vulteken tussen blocks
+
+Telkens als het voor een DXE nodig is, de zender ingeschakelt te
+houden zonder een block uit te zenden, moet de tijd tussen de
+blocks opgevuld worden met achter elkaar gezonden flags. Ook
+na het inschakelen van de zender tot de werkelijke data stroom
+begint, moeten steeds flags gezonden worden. 
+
+2.2.12 Toepassingen
+
+Bij amateur packet-radio vindt men vooral half-duplex
+verbindingen met meervoudig gebruik van dezelfde frequentie.
+De mogelijkheden van de transmissie staan dan ook maar
+algemeen in het AX.25 protokol, in ieder geval minder scherp
+omschreven als in het originele X.25 geschrift. In de originele
+tekst bij AX.25 staat "niet van toepassing" (vrij vertaald).
+
+2.2.13 Codering van het adres veld.
+
+In het adres veld van een block moeten zowel de afzender als de
+geadresseerde opgenomen zijn. Met uitzondering van de zgn.
+twee stations 'id' (SSID secondary station identifier) moet dit
+adres veld alleen uit hoofdletters en cijfers uit het ASCII
+tabel bestaan. indien niveau-2 gebruikt wordt moeten ook de
+calls in dit veld staan.
+
+AX.25 gebruikt het uitgebreide adres-veld volgens DIN 66221.
+hierbij kan het HDLC adres-veld een onbeperkt aantal bytes lang
+zijn. Het laagstwaardige bit van een adres-byte wordt als
+aanvullings-bit gebruikt. Is dit bit '0' dan volgt een
+volgende adres-byte, is het een '1' dan betekent het het
+laatste byte van het adresveld. Om voor deze uitbreiding plaats
+te maken, wordt de call een bit naar links verschoven.
+In AX.25 is het aantal bytes in het adres-veld altijd deelbaar
+door 7. Het korste adres-veld bestaat uit 14 bytes (zend en
+ontvangst call). Het langste adres veld bestaat uit 70 bytes,
+(zender, ontvanger en 8 digipeater calls).
+
+2.2.13.1 Codering van het adres-veld zonder digipeater.
+
+Als u geen level-2 gebruikt, zal het adres veld worden zoals in
+afbeelding 2 afgedrukt. Het ontvanger-adres bevat de call van
+het station waaraan de packet gericht is, het afzender-adres
+bevat de call van het station dat de packet verstuurd heeft.
+Deze beide call,s definieren alleen de beide eindpunten van een
+level-2 verbinding.
+
+    eerst uitgezonden byte.
+    -------------------------------------------------------
+                   adresveld van een block
+    -------------------------------------------------------
+    ontvanger-adres            afzender-adres
+    -------------------------------------------------------
+    a1 a2 a3 a4 a5 a6 a7       a8 a9 a10 a11 a12 a13 a14
+    -------------------------------------------------------
+
+                       afbeelding 2. 
+
+a1 tot a14 zijn de 14 bytes waaruit de beiden adres-sub-velden
+bestaan van het hele adres-veld. Het ontvanger sub-adres is 7
+bytes lang en wordt het eerst overgebracht. Deze adres volgorde
+biedt de ontvanger de mogelijkheid, het adres-sub-veld te
+controleren, terwijl hij de rest van het frame ontvangt. Het
+afzender adres-sub-veld wordt dan aansluitend in de bytes a8 tot
+a14 overgebracht. Deze volgorde wordt ook in de professionele
+praktijk gebruikt, dus eerst  de call van ontvanger en daarna
+pas de afzender. Beide sub-velden zijn op gelijke wijze
+opgebouwd, alleen met de uitzondering dat in de laatste byte
+van het afzender-adres van de HDLC een uitbreidings-bit gezet is.
+
+Het onderstaande schema toont de opbouw van het ontvanger-
+sub-veld, dat in de bytes a1 tot a7 van het adres veld
+overgezonden wordt. In de binaire afbeelding vindt u het eerst
+over te zenden bit in de rechter bovenhoek. 
+
+    ----------------------------------            
+     byte    ascii  binair      hex.  
+    ----------------------------------
+     a1       d    10001000     88
+     a2       l    10011000     98
+     a3       3    01100110     66
+     a4       h    10010000     90
+     a5       c    01000110     86
+     a6       m    10011010     9a
+     a7    ssid    crrssid0
+    ----------------------------------
+    bit  positie   76543210
+
+de verklaring:
+
+1. Het eerste byte (a1) is het eerste gezonden.
+2. Het bit 0 van iedere byte is het adres-uitbreidings-bit
+   van de HDLC. Het is '0' voor alle bytes, tot aan het 
+   laatste adres-byte. In het laatste byte wordt het op '1' gezet.
+3. De call moet alleen uit hoofdletters en cijfers van de 
+   ASCII tabel bestaan, echter een bit verschoven naar 
+   het hoogstwaardige bit, om het laagstwaardige bit vrij te
+   houden van het uitbreidingsbit. Is de call kleiner als 6
+   tekens, dan moet deze aangevuld worden tot 6.
+4. Byte a' bevat de SSID (secondary station identifier). 
+   Deze SSID maakt het mogelijk, meerdere packet stations 
+   onder dezelfde call te laten werken en ze toch onafhankelijk
+   van elkaar te laten werken. (pe1fib, pe1fib-7, enz.)
+   De SSID 0000 is standaard. Dit wordt uiteraard het meest
+   gebruikt, dus een call zonder toevoeging.
+5. De met een 'r' gemerkte bits zijn bedoelt voor toekomstige
+   uitbreidingen. Deze zijn in individuele netten wel bruik-
+   baar, maar dan alleen na afspraak met het tegenstation.
+   Bij niet-gebruik op een '1' zetten.
+6. Het met 'c' gemerkte bit wordt, zoals beschreven in 2.4.1.2 
+   bebruikt als commando/antwoord bit in een AX.25 block.
+
+Het afzender sub-veld wordt op dezelfde manier gecodeerd, net
+als het ontvanger sub-veld en in de adres bytes a8 tot a14
+uitgezonden. Als geen niveau-2 digi gebruikt wordt, dan moet
+bit 0 in de SSID byte a14 op een '1' worden gezet.
+
+    -----------------------------                
+     byte  ascii  binair     hex.
+    ----------------------------- 
+     a8      d   10001000    88
+     a9      k   10010110    96
+     a10     8   01110000    70
+     a11     h   10010000    90
+     a12     i   10010010    92
+     a13         01000000    40
+     a14  ssid   crrssid1    
+    -----------------------------
+     bit positie 76543210
+
+       afbeelding 3a       Codering van het afzender sub-veld.
+
+
+2.2.13.2 Codering van de level-2 digi-adressen.
+
+Als een bloc via een level-2 digipeater wordt overgezonden,
+moet een aanvullend adres sub-veld worden toegevoegd als
+adresbyte a15 tot a21. In dat geval is het bit (0) van positie
+a14 op nul gezet  om aan te geven dat een verder adres sub-veld
+volgt. Het (0) bit van a21 wordt op '1' gezet om het einde van
+het adresveld aan te geven.
+
+Het digipeater sub-veld is op dezelfde manier gecodeerd als het 
+ontvanger sub-veld, met uitzondering dat het hoogstwaardige bit
+in de laatste byte a21 als 'h' bit wordt gegeven en moet
+aangeven of het bloc reeds door een digi is overgezonden.
+Op weg naar een digi moet het bit op '0' gezet zijn, de digi zet
+dan dit bit op '1' voordat het bloc weer wordt uitgezonden.
+
+    --------------------------------             
+    byte    ascii   binair     hex.
+    --------------------------------              
+    a15       d    10001000    88
+    a16       l    10011000    98
+    a17       0    01100000    60
+    a18       c    10000110    86
+    a19       c    10000110    86
+    a20       c    10000110    86
+    a21    ssid    hrrssid1
+    -------------------------------
+    bit positie - 76543210 
+
+ de codering van het digipeater sub-veld.
+
+
+2.2.13.3 Werken via meerdere digipeaters.
+
+Het link layer protokol staat toe dat via een aantal
+digipeaters gewerkt kan worden en geeft de mogelijkheid 
+met een eenvoudige aanduiding, om blocks verder te leiden.
+In totaal kunnen maximaal 8 digipeater-subvelden in het adres
+staan. Hierbij is het eerste digi sub-veld, wat op het adres-
+veld volgt, ook het adres van de eerste digi. De digi,s zetten
+meestal het 'h' bit dat het sub-veld voor hen aangeeft, om
+aan te geven dat zij het bloc overgezonden hebben. Buiten de  
+gewone narekening van het FCS, moeten in het bloc geen
+veranderingen worden gemaakt. Het ontvangende station kan aan de
+hand van het adres veld zien, hoe het bloc naar hem toegekomen
+is. Het aantal digi sub-velden is variabel. Alleen het (0) bit 
+van de SSID bytes van de laatste digipeater wordt op '1' gezet
+om aan te geven, dat hier het adres-veld ophoudt. In alle
+andere SSID bytes is het bit (0) op nul gezet. 
+
+De waarde van de verschillende tijdconstanten moeten aan de 
+hoeveelheid digi,s worden aangepast, als een block over
+verschillende digi,s wordt geleidt en de bevestiging dezelfde
+weg terug moet komen.
+
+Er wordt verwacht dat het werken over verschillende digi,s
+een zaak van tijdelijke aard is, zeker om grotere afstanden te 
+overbruggen. Alleen het werken op level-3 zal hierin verbetering
+brengen. Het werken op level-2 met digi,s zal dan niet meer
+zinnig zijn. 
+
+
+NOOT: v/d vertaler, de NRTROM (nodes) werken al op level 3.
+Deze hebben t.o.v. gewoon digi-werk een enorme winst aan 
+belasting v/d frequentie en snelheid, ca 800 procent ....
+
+
+De verschillende blocks.
+-----------------------
+
+In het algemeen zijn er drie(3) verschillende soorten blocks.
+  - het informatie block: i block
+  - de stuur/commando blocks (supervisor blocks) s blocks
+  - stuurblocks zonder nummering (unnumered blocks) u blocks
+Afbeelding 5 toont de grondformaten van het kontroleveld van            
+deze drie soorten blocks.
+
+    ----------------------------------------           
+    kontroleveld      kontroleveld-bits.
+       type          7 6 5   4  3 2  1  0
+    ----------------------------------------             
+      i-block         n(r)   p   n(s)   0
+      s-block         n(r)  p/f  s s 0  1
+      u-block        m m m  p/f  m m 1  1
+    ----------------------------------------       
+
+   Hierbij geldt:
+1. bit 0 is het eerste, bit 7 het laatst uitgezonde bit van het
+   controle veld.
+2. n(s) is de volgorde van uitzenden (bit 1 is het bit met de
+   laagste waarde
+3. n(r) is de volgorde van ontvangst (bit 5 is het bit met de
+   laagste waarde)
+4. de s bits specificeren een zekere stuurfunctie in de
+   s blocks. de kodering wordt in 2.3.4.2. beschreven. 
+5. de m bits specificeren een zekere stuurfunctie on de onge-     
+   nummerde block (u-blocks). de kodering wordt in 2.3.4.3
+   beschreven.
+6. het poll/final bit (P/F bit) is bedoelt voor zend oproep en einde
+   aanwijzing. Deze functie wordt in 2.3.3 behandeld en het gebruik
+   ziet u in 2.4.2. Het verschil tussen zend oproep en einde, dat
+   betekent dus tussen commando en antwoord, is vastgelegd in de 
+   adres regels in 2.4.1.2.
+
+De i-blocks worden gebruikt voor het overzenden van datapakketten
+(tekst of hogere protokol niveaux). In i-blocks is het bit 0 van
+het controle veld op '0'. N(s) is de zend volgorde       
+afzender. N(r) is de ontvangst volgorde van de afzender, (de
+volgorde van het volgende te verwachten i-block in de andere
+richting) en kan gebruikt worden voor bevestiging van nog niet
+bevestigde i-blocks. De nummer volgorde is in 2.3.2.4beschreven.
+
+De s-blocks worden gebruikt voor contolerende stuurfuncties, zoals    
+de bevestiging van data blocks, het verzoek om herhaling van
+blocks of voor tijdelijke onderbreking van uizenden. 
+Bij s-blocks is het 0 bit van het controleveld op '1' gezet
+en bit 1 op '0'. s-blocks hebben geen informatie veld.  
+
+De u-blocks worden gebruikt voor verdere commando stuurfuncties.
+Ze zijn onder andere verantwoordelijk voor het aangaan en afbreken 
+van een verbinding. Bovendien laten u-blocks de transmissie toe 
+van informatie buiten de normale data stroom om. In u-blocks 
+zijn de bits 0 en 1  van het contoleveld allebei op '1' gezet.
+Enige soorten u-blocks kunnen informatie en PID-velden bevatten.
+
+
+        hier vast de codering van de controle-velden:
+
+    --------------------------------------------------------
+    commando of melding       bits in het controle-veld
+                              7 6 5   4  3 2  1  0
+    --------------------------------------------------------
+    informatie-overdracht  i  n(r)    p  n(s)    0
+    klaar v. ontvangst    rr  n(r)   p/f 0 0  0  1
+    niet kl.v. ontv.     rnr  n(r)   p/f 0 1  0  1
+    verz.tot herh.       rej  n(r)   p/f 1 0  0  1
+    verz. verb.opbouw   sabm  0 0 1   p  1 1  1  1
+    verb. afbouw        disc  0 1 0   p  0 0  1  1
+    verb. terugwijz.      dm  0 0 0   f  1 1  1  1
+    ongen. bevestig.      ua  0 1 1   f  0 0  1  1
+    niet acc. v. block  frmr  1 0 0   f  0 1  1  1
+    ongenumm. info        ui  0 0 0  p/f 0 0  1  1 
+
+
+Ieder block is genummerd in reeksen van 8 stuks, beginnend bij 
+0 en eindigend bij 7. Hierdoor zijn maximaal 7 onbevestigde        
+blocks mogelijk in een level 2 verbinding.
+
+De zend volgorde teller is een interne variabele van de DXE.
+Hij bevat de volgnummers van het eerst volgende i-block en wordt
+bij uitzending van elk i-block met 1 verhoogd. De uitzend
+volgorde is in het contole veld van elk i-block opgenomen.   
+Voor de uitzending van een i-block wordt het getal gelijk gezet 
+met de teller van de afzender.
+
+De ontvangst teller is ook een interne variabele van de DXE. Hij
+bevat het volgnummer van het volgende te verwachten i-block en             
+wordt verhoogd als een foutloos i-block ontvangen is.
+
+Het ontvangst volgnummer is opgenomen  in de controle velden 
+van de i- en s-blocks. Voor de uitzending van een i- of s-block
+wordt het ontvangst volgnummer gezet op de waarde van de 
+ontvangst volgteller. Hierdoor wordt aangegeven dat de DXE, die
+n(r) zendt, alle i-blocks van het tegenstation tot de waarde
+n(r), goed ontvangen heeft.
+
+Het poll/final bit wordt in alle blocktypen gebruikt. Als
+commando (poll) nodigt hij uit voor een direkt antwoord op een 
+uitgezonden block. Het antwoord op dit commando is door een
+eveneens gezet bit (final) aangegeven. In elke richting van de 
+verbinding is een dergelijke poll toestand alleen op een bepaald
+moment toegestaan. Zie hiervoor ,gebruik van het p/f bit, 2.4.2.
+
+De volgende commando,s en meldingen, aangegeven door het
+kontrole veld, kunnen in een DXE gebruikt worden: 
+
+De i-blocks verzorgen de overzending van data en textpaketten. 
+Het kontrole veld van i-blocks is afgebeeld bij 6, (zie hier 
+boven). De transmissie van data in i-blocks wordt altijd als
+commando gezien. (aangeduid door een p in het veld van het
+p/f-bit). De i-blocks zijn in het kontroleveld door n(s) genummerd
+om hun weg door de link-layer verbinding te kunnen vervolgen.
+
+De controle velden van de drie verschillende types van
+supervisor blocks zijn in afbeelding 6 te zien. (zie hier boven)
+
+De melding of het commando "klaar voor ontvangst" (receive ready)
+wordt in een block als 'rr' overgezonden. Het rr-block
+wordt voor de volgende zaken gebruikt:
+
+1. Om aantegeven dat de afzender van het rr-block in staat is,
+   verdere info te kunnen ontvangen.
+
+2. Om de ontvangst van goed ontvangen packets in i-blocks tot
+   nummer n(r)-1 te bevestigen.
+
+3. Om een vooraf bestaande toestand van niet gereed voor het
+   ontvangst te kunnen opheffen.
+
+       
+De verschillende commando meldingen.
+
+Zoals we in afbeelding 6 hebben kunnen zien, kunnen een
+aantal commando meldingen op het scherm komen. we zullen deze 
+in deze aflevering en eventueel volgenden behandelen.
+
+Het commando sabm wordt gebruikt om twee DXE,s (dus zelfstandige
+packet units), vanuit de toestand asyncrone gebalanceerde
+mode, om te zetten naar gelijkberechtige partners. Deze toestand
+is bekend als LAPB (link acces procedure balanced).
+In een sabm block mag geen informatie voorkomen. Eventueel van
+te voren of tijdens deze procedure blijven i-blocks onbevestigd.
+Een DXE (packet zend ontvangst unit dus) bevestigd de acceptatie
+van een sabm commando door het uitzenden van een ua-melding, en
+wel zo snel mogelijk. Als een DXE een dergelijk commando niet
+kan accepteren zal het indien mogelijk, antwoorden met een 
+dm-block.
+
+Het commando disc wordt gebruikt om de verbinding tussen twee
+gelijkberechtigde stations te verbreken. Ook in een disc block 
+mag geen informatie ingepast zijn. Voordat de ontvangende DXE
+het disc block bewerkt, bevestigd zij de ontvangst door een
+ua-melding uit te zenden. De DXE die het disc block heeft
+verzonden, verbreekt de verbinding op het moment dat de
+ua-melding is ontvangen.
+
+2.3.4.3.4 De melding UA (unnumbered acknowledge).(ongenummerde
+          bevestiging)
+De ua-melding wordt gebruikt om de ontvangst en acceptatie van         
+een sabm of een disc commando te bevestigen. Het ontvangen
+commando wordt eerst bewerkt, nadat de ua melding uitgezonden
+wordt. ui-blocks mogen geen info bevatten.
+
+2.3.4.3.5. De melding DM (disconnected mode).(verbindings
+           terugwijzing)
+Het commando dm wordt door een DXE verzonden als er blocks
+worden ontvangen van een station waarmee geen connect loopt,
+en welke geen sabm of ui-blocks zijn. In dit geval moet in het
+kontrole veld van het dm-block het f bit op nul staan.
+De dm melding wordt ook als antwoord uitgezonden om aan te geven
+dat de DXE op dat moment geen verbinding wil aangaan. Dit kan
+voorkomen als de DXE reeds alle connect mogelijkheden in bedrijf
+heeft of wanneer de DEX gespert is voor externe connects.
+De dm-blocks bevatten geen i-veld.
+
+2.3.4.3.6 De melding UI (unnumbered information).(ongenummerde
+          informatie)
+De ui-blocks kunnen zowel gebruikt worden voor commando,s als ook
+voor een melding.  
+         "Normale  blocks met info hebben een volgnummer en worden
+          ook in die volgorde bij de ontvanger op het scherm gezet
+          vandaar ook de kreet 'ongenummerde informatie'. Dit geeft
+          aan dat betreffende 'ongenummerde blocks' geen volgnummer
+          hebben en niet bevestigd worden door welke ontvanger
+          dan ook." (aanvulling PE1FIB)
+De ui-blocks bevatten een pid- en een info-veld en worden gebruikt 
+om informatie via de verbinding, zonder controle, over te
+brengen. Doordat deze blocks niet gecontroleerd worden is het
+verlies van een ui-blocks niet te herkennen of te controleren.
+Het ontvangen ui-block met gezette p bit moet bevestigd worden.
+Het antwoord is dan een dm-block, als de DXE met iemand anders
+verbonden is, in andere gevallen zal dit een rr- of een rnr-block 
+zijn. 
+
+2.3.5 Melding van fouten en oyectie.
+Er kunnen fouten, ontstaan op link-niveau, die men kan
+corrigeren, zonder een verbinding af te breken. Dit zijn de 
+zogenaamde transmissie fouten en verloop fouten die ontstaan in
+de DXE (packet-ontvangst-zend-unit).
+
+2.3.5.1. Niet klaar voor ontvangst. (RNR)
+Als een DXE op een bepaald moment niet in staat is verdere blocks 
+te ontvangen, omdat bijvoorbeeld de ontvangst-buffer vol is, dan
+wordt het tegenstation daarop geattendeerd door het uitzenden
+van een block waarin RNR staat. Als het ontvangstation daarna 
+weer gereed is om te ontvangen dan wordt een RR, REJ, UA of SABM
+block gegeven.
+
+2.3.5.2. Fouten in de volgorde van uitzenden.
+Als het zend-volgnummer n(s) van een zonder CRC-fout ontvangen
+I-block niet met de ontvangst-teller V(R) overeenkomt, dan is
+een fout in de uitzend volgorde opgetreden en het I-veld van het
+betreffende block wordt niet geaccepteerd. De ontvanger zal dit
+block en ook de daarop volgenden niet bevestigen, net zolang tot
+hij een block ontvangt met het nummer dat wel aansluit op het 
+ontvangst-volgnummer.
+
+Het kontrole-veld van een dergelijk I-block wordt echter wel
+gecontroleerd en voor sturing van de verbinding gebruikt. Het
+wordt dan gebruikt (het ontvangstnummer) voor het bevestigen van
+de in tegenrichting uitgezonden I-blocks.
+
+2.3.5.3. Herhaling na REJ
+Een packet station (DXE) gebruikt de melding REJ om het
+tegenstation te verzoeken een I-block te herhalen, nadat een
+fout in de zend-volgorde is geconstateerd. In elke richting is
+maar een (1) herhaling-opdracht mogelijk. Het tegenstation
+meldt de fout wanneer ze alle onbevestigde I-blocks met een REJ
+heeft ontvangen. Maximaal zoveel als het toegestane aantal
+onbevestigde I-blocks.
+
+2.3.5.4.1 Herhaling nadat tijdgever T1 is afgevallen.
+In het geval dat een DXE door een transmissie fout van een enkel
+I-block of het laatste I-block iets niet ontvangt, dan zal geen
+fout in de zend-volgorde worden vastgesteld en daardoor ook geen
+REJ worden verzocht. De andere DXE, die het nog niet bevestigde
+block heeft gezonden zal na het afvallen van T1 maatregelen gaan
+treffen om te gaan bekijken met welk I-block opnieuw begonnen
+moet worden voor her-uitzending. Die maatregelen zijn te lezen
+in 2.4.4.9. Deze toestand wordt opgeheven door de bevestiging
+van het betreffende I-block of door het afbreken van de
+verbinding.
+
+2.3.5.4.2. Herhaling nadat tijdgever T3 is afgevallen.
+De tijdgever T3 zal erover waken dat de verbinding nog bestaat, 
+ook als over langere tijd  geen data zijn verzonden. Altijd als
+T1 niet loopt (geen onbevstigde blocks), wordt T3 gebruikt om in
+regelmatige afstanden de verbinding met de dxe te controleren.
+Als T3 afloopt zal een RR of RNR block als commando met gezette
+P-bit worden uitgezonden. Aansluitend wordt op de in 2.4.4.9
+beschreven bevestiging gewacht.
+
+2.3.5.5. Fouten in het block-controle-systeem.
+Een block met een fout in block controle systeem wordt niet
+geaccepteerd en zonder verdere reactie verworpen.
+
+2.3.5.6. Niet acceptatie van een block.
+Het niet accepteren van een block begint, zodra een block 
+ontvangen wordt wat foutloos is, maar waarbij de FSC niet 
+acceptabel wordt geacht, maar wel voldoet aan 2.3.4.3.3.
+Als eenmaal de toestand van terugwijzing ingetreden is, dan 
+zullen geen blocks van het 'I' type meer worden geaccepteerd,
+totdat de fout gecorrigeerd is. Deze foutmelding wordt door de 
+dxe aangegeven door uitzending van FRMR blocks (2.4.5.)
+
+2.4.1.1 Adres informatie.
+Alle uitgezonden blocks moeten een adres-veld bevatten, beschre-     
+ven in 2.2.13. Tenminste moeten aanwezig zijn, de afzender en 
+de geadresseerde, waarbij de ontvanger op de eerste plaats
+staat. Hierdoor is het mogelijk dat veel verbindingen op het 
+zelfde kanaal plaatsvinden. 
+
+Het ontvanger adres kan ook de naam van een groep of een
+club-call zijn, als de uitzending aan meerdere mensen is gericht
+(via bakenmeldingen of ui-blocks). 
+
+2.4.1.2. Onderscheid tussen commando en melding.
+In de versie 2.0 van het AX.25 protokol is het verschil tussen
+een commando en een melding in het adres ingebouwd. Om met 
+vorige versies compatibel te blijven, wordt deze informatie in 
+twee bits overgezonden. Het is in bit 7 van de SSID-bytes van 
+de zender en ontvanger ingebed. 
+Een DXE die beide protokol versies accepteert, kan aan de hand
+van commando/meldings-bits herkennen, of ze met een tegenstation
+verbonden is, dat de vroegere versie van ax.25 gebruikt. Als de
+beide C-bits op nul staan, gebruikt het tegenstation het oude 
+protokol. In de nieuwe versie is steeds een bit op nu en het
+andere op '1' gezet, afhankelijk of het om een commando of een
+melding gaat. 
+
+Alle blocks worden of als commando of als melding aangezien,
+zodat in de versie 2.0 altijd een van de C-bits op nul staan,
+het andere altijd op een gezet is. 
+
+Door de aanvullende commando-melding-informatie kunnen in de
+AX.25  S-blocks zowel commando als melding zijn. Dit helpt bij
+de tot standhouding van de controle over de verbinding tijdens 
+de data-zendings-phase.
+
+2.5.3 Voorschriften voor de opbouw en beeindiging v/e verbinding.
+
+2.4.3.1. Opbouw van een LAPB verbinding.
+Als een DXE een verbinding wil aangaan met een andere DXE, dan
+stuurt hij een SABM commando-block naar dit station en start
+daardoor de tijdgever T1 op. In het geval dat de ontvangende DXE
+dit block ontvangt en een verbinding wil aangaan, zal hij met
+een UA-block antwoorden en de beide volg tellers v(s) en v(r) op
+nul zetten. De ontvangst van het UA-block door de oproepende
+zender zorgt ervoor dat de teller T1 gestopt wordt en de
+volgteller op nul wordt gezet. 
+Als de ontvangende DXE niet antwoordt voordat de tijdgever T1 is
+afgelopen, zal de zendende DXE opnieuw een SABM block uitzenden en 
+T1 weer beginnen te lopen. Deze DXE zal N2 pogingen doen door 
+het uitzenden van een SABM block tot de verbinding is
+gerealiseerd. N2 is in 2.4.7.2. gedefinieerd.
+Als de DXE (ontvangende) na ontvangst van de SABM besluit geen 
+verbinding te willen aangaan, dan zal deze een DM-block
+uitzenden (zie 2.3.4.3.5). De DXE, die het SABM block heeft
+uitgezonden zal na ontvangst van het DM-block, de tijdgever T1 
+stoppen en niet verder proberen om een verbinding op te bouwen.
+De voor een verbinding geroepen DXE zal alle blocks verder
+ignoreren (niet willen zien ) behalve SABM,DISC,UA en DM
+-blocks.
+
+2.4.3.2. Toestand van data-overzending.
+Nadat een verbinding is opgebouwd, zal de DXE overgaan in de 
+fase van data overbrenging. Nu kunnen I en S blocks worden 
+gezonden en geaccepteerd.
+
+2.4.3.3. Opbouw v/e verbinding.
+Tijdens de fase van data zenden en ontvangen kunnnen beide
+DXE,s een beeindiging van de verbinding inleiden door een 
+DISC-block in de looptijd van T1 uit te zenden. Elke DXE zal na 
+ontvangst van geldig DISC-block, een UA block teruggeven en 
+wordt de verbinding afgebroken.     
+In het geval dat geen UA of DM block ontvangen wordt voordat de 
+tijdgever T1 is uitgelopen, dan moet het DISC commando worden
+herhaald. Beide DXE's zullen dan de toestand 'free' aannemen.
+
+2.4.3.4 De toestand 'FREE'
+In de toestand 'vrij' zal een DXE alle commando's bekijken maar
+alleen op het SABM commando reageren. Er wordt na ontvangst dan
+een DM-block uitgezonden. In de toestand 'vrij' kan de DXE een
+verbinding beginnen zoals beschreven in 2.4.3.1. Op commando-
+blocks met gezette P-bit, uitgezonderd SABM of UI-blocks, zal de
+DXE reageren met een DM-block, als het F-bit gezet is. Het
+ontvangen block zal dan niet verder bekeken worden. 
+
+2.4.3.5 Herstel na een botsing.
+
+2.4.3.5.1 botsingen in een half-duplex verbinding.
+Botsingen van blocks in een half-duplex verbinding worden door
+het gedrag van de tijdgever T1 en de herhalingstellers
+opgevangen. Verdere akties van de operator zijn niet nodig.
+
+2.4.3.5.2 Botsingen van niet genummerde commando's.
+Als twee SABM of DISC commando,s met elkaar botsen moeten de DXE's
+zo snel mogelijk een UA-block uitzenden. In het geval dat een
+SABM en een DISC commando botsen moet een DM block worden
+uitgezonden.
+
+2.4.3.5.3 Botsingen v/e DM-block met een SABM of DISC block.
+Als een niet gevraagde DM melding uitgezonden wordt kunnen 
+botsingen voorkomen. Om te vermeiden dat de DM-blokken verkeerd 
+worden geinterpreteerd, moeten alle niet gevraagde DM-blokken
+met een op nul gezette F-bit worden uitgezonden en alle SABM en
+DISC-blocks met een op nul gezette P-bit worden gezonden. Het
+antwoord op een dergelijk SABM of DISC block kan dan alleen maar
+een DM of UA block zijn met een op nul gezette F-bit, zodat een
+verwisseling uitgesloten is.
+
+2.4.3.6 Gebruik zonder stroom-controle.
+In de amateur-radio hobby is er een aanvullende mode, die met
+level-2-verbindingen niet te realiseren is, namelijk een
+gespreks-ronde waarbij meerdere mensen betrokken zijn. De
+implementatie van deze mode ligt technisch buiten het bereik van
+AX.25 verbindingen, toch is het mogelijk om de blockstruktuur
+van AX.25 te benutten.
+
+In AX.25 gebruikt men een speciaal block-type voor deze mode,
+beter bekend als het ongenummerde info-block (UI-block). Bij
+deze mode moet men in het sub-veld aan de ontvanger zijde een
+code-woord gezet worden, waarmee de deelnemers aan de ronde zich
+kunnen orienteren. Dit om geen problemen te hebben met packets
+die niet voor hen bestemd zijn, maar wel op hetzelfde kanaal
+worden uitgezonden. Als voorbeeld diene het volgende. We kunnnen
+het woord 'packet' gebruiken als code woord. De meeste DXE,s 
+hebben wel de mogelijkheid, alleen blocks mee te schrijven die
+aan een bepaald adres gericht zijn (monitor-only-commando). De
+call van de afzender is eveneens in het block geplaatst, zodat
+men kan herkennen van wie de bijdragen in het gesprek komen.
+Aangezien deze mode zonder 'stroom-controle' werkt, de UI-blocks
+zijn niet genummerd, zullen er geen verzoeken om herhaling komen
+van blocks die verminkt zijn of een fout bevatten. Botsingen
+kunnen uiteraard ook optreden, met het gevaar dat die twee
+blocks in elkaar overvloeien. 
+
+2.4.4 Voorschriften voor het overzenden van data. 
+Als een verbinding, zoals boven beschreven, opgebouwd is, kunnen
+alle stations i,s en u blocks accepteren
+
+2.4.4.2.1 DXE klaar voor ontvangst.
+Als een DXE een geldig I-block ontvangt (met een juist FCS en 
+een goed volgnummer) en tevens klaar is voor ontvangst, zal hij
+het block accepteren en tevens de ontvangst teller met een
+verhogen en de volgende aktie ondernemen:
+1. als de DXE zelf een I-block moet verzenden, dan wordt het
+ontvangstnummer N(r)van dit block hetzelfde als het ontvangst-
+nummer V(r) en het block uitzenden. Daarmee bevestigd hij het
+ontvangen I-block. Alternatief kan zijn om een RR-block met N(r)
+te zenden en aansluitend een I-block.
+2. heeft de dxe geen I-blocks UI tre zenden, dan bevestigd hij
+de ontvangst met een RR-block waarvan de waarde N(r) op V(r)
+gezet is. 
+
+2.4.4.2.2 DXE niet klaar voor ontvangst.
+Als de DXE zich in de 'niet-klaar-voor-ontvangst' bevindt dan
+kan hij het I-block ignoreren (niet accepteren), zonder dat er
+een RNRr-block op de nog bestaande toestand wordt gewezen.
+
+In het geval dat een dxe van het tegenstation de melding ,niet-
+klaar 'ontvangt' zal die periodisch navragen , wanneer hij weer
+klaar voor ontvangst is. dit kan met rr- of rnr blocks gebeuren,
+waarin het P-bit op een (1) is gezet. 
+
+2.4.4.3 Ontvangst van blocks met een verkeerde volgorde.
+Als een I-block wordt ontvangen, waarvan het FCS juist is,
+maar waarvan het zender-volgnummer N(s) niet overeenkomt met de 
+inhoud van de ontvangstteller N(s) van de ontvanger, moet het
+block worden afgewezen. Een REJ-block wordt dan uitgezonden met
+een ontvangst volgnummer dat een punt hoger is als het laatst           
+ontvangen I-block. Voordat het I-block  afgewezen wordt, moet 
+de DXE het ontvangst-volgnummer en het P-bit omrekenen. 
+
+2.4.4.4. Ontvangst van blocks met een fout.
+Alle blocks met een verkeerd FCS, ongeldige blocks of blocks met
+een verkeerd adres worden afgewezen.
+
+2.4.4.5 Ontvangst bevestiging.
+Altijd als een I of S-block goed ontvangen wordt, zelfs als de
+DXE niet ontvangst-klaar is, moet de N(r) van het block worden 
+berekend om te zien, of uitgezonden, van te voren onbevestigde
+I-blocks nu toch bevestigd worden. Is dit het geval, dan moet
+de tijdgever T1 gestopt worden. Als T1 gestopt wordt en er zijn
+nog een aantal onbevestigde blocks, dan moet T1 opnieuw gestart
+worden. Loopt de tijdgever T1 af, voordat een bevestiging
+ontvangen werd, dan moet het station de I-blocks opnieuw
+uitzenden. 
+
+2.4.4.6 Ontvangst v/e herhalings verzoek.
+Als een DXE een REJ-block ontvangt, dan zet die de zender-volg-
+teller op de waarde van het ontvangst volgnummer van het
+REJ-block. De DXE zal dan alle onbevestigde I-blocks zo snel
+mogelijk opnieuw uitzenden:
+
+1. zendt de DXE op dat moment niet en het kanaal is vrij, dan
+kan direkt met de herhaling begonnen worden.
+2. werkt de DXE in vol-duplex en zendt ze juist een UI- of
+S-block uit, dan is het mogelijk, zonder dit block aftebreken,
+de te herhalen blocks er direkt achteraan te zenden.
+3. werkt de DXE in vol-duplex en ontvangt ze een REJ-block,
+terwijl ze aan een ander een I-block zendt, dan kan het I-block
+worden afgebroken en direkt met de herhaling worden begonnen.
+4. aansluitend aan de herhaling kan de DXE, in het geval dat
+verdere I-blocks te verzending klaar staan, deze direkt zenden,
+zolang het aantal in totaal, het maximale aantal onbevestigde
+blocks niet overschrijdt.
+   
+Ontvangt de DXE een REJ-block met gezet P-bit, dan moet ze,
+voor de I-blocks worden herhaald, een RR of RNR block met gezet
+F-bit uitzenden. 
+
+2.4.4.7 Ontvangst van de melding 'niet-klaar-voor-ontvangst'
+ontvangst de DXE een RNR block, dan zal ze geen verdere I-blocks
+aan het tegenstation zenden, tot deze weer een 'ontvangst-klaar'
+melding geeft. In het geval dat de tijdgever T1 afloopt, nadat
+een RNR block is ontvangen, dan zal de DXE een procedure gaan
+volgen, die in 2.4.4.9 beschreven wordt. Het tegenstation zal 
+periodisch worden bevraagd naar de status, tot ze zich weer
+ontvangst-klaar meldt. 
+
+2.4.4.8 Uitzending v/d melding "niet klaar voor ontvangst"
+als een DXE voorlopig niet in staat is verdere I-blocks te
+ontvangen, deelt hij dat aan het tegenstation mee door de
+een RNR-block. een DXE die niet klaar is voor ontvangst, kan in
+sommige gevallen nog wel S-blocks decoderen. Als hij een S-block
+met gezet P-bit ontvangt, moet hij als antwoord een RNR block
+met gezet F-bit uitzenden.
+Is de DXE weer klaar-voor-ontvangst dan zend hij aan het
+tegenstation een RR-of REJ-block, al naar gelang of het laatst
+ontvangen I-block met een goed of verkeerd volgnummer is
+ontvangen. ( 2.4.4.2 en 2.4.4.3 )
+
+2.4.4.9 Wachten op bevestiging.
+Als de tijdgever T1 afloopt terwijl de DXE op de bevestiging van
+een I-block wacht, dan wordt T1 weer opnieuw gestart en wordt opnieuw
+een S-block (RR of RNR) met gezet P-bit uitgezonden. Ontvangt de
+DXE een S-block met gesteld F-bit dan start de tijdgeven T1
+opnieuw en zet de waarde (V) op de waarde van het ontvangen
+S-block. Aansluitend zendt hij een I-block of, als nog I blocks
+onbevestigd zijn, zendt hij deze uit. Ontvangt de DXE echter een
+S-block zonder gezet F-bit, een S commando-block of een I-block,
+dan zal T1 verder lopen en het ontvangene als bevestiging voor
+I-blocks tot nummer N(R) gebruiken. 
+
+2.4.5 Wat gebeurt na terugwijzing van een block ?
+Een DXE moet de procedure van afwijzing beginnen, als hij een 
+in de data-overzendings-fase een block ontvangt waarin de FCS
+niet juist is. Na uitzending van een FRMR block gaat de DXE over
+op een terugwijs procedure. Deze toestand wordt weer opgeheven
+als een SABM,disc of een DNM melding wordt ontvangen. Alle
+andere commando,s bewerken het opnieuw uitzenden van een FRMR
+block met een zelfde I veld als in het eerst FRMR block.
+
+
+
+Hiertussen zo je verwachten dat de items 2.4.6 nog moeten komen?????
+
+
+
+De tijdregelaars T1,T2 en T3.
+
+2.4.7.1.1. Primaire tijd-controle (acknowledge timer) T1.
+de tijdregelaar T1 zorgt ervoor dat een DXE niet eindeloos
+op het bevestigings-antwoord hoeft te wachten van de uitzending die 
+hij gepleegd heeft. De aflooptijd van deze tijdregelaar moet
+minstens twee maal zo groot zijn als de overzend tijd van een
+block van maximale lengte aangevuld met de bevestigingstijd.
+Hierdoor is voldoende tijd voorhanden voor de decodering bij het
+tegenstation. In geval dat de versie 2 van het AX.25 protokol
+gebruikt wordt moet deze tijd uiteraard aangevuld worden met het
+aantal digipeaters die zijn tussengeschakeld. Dus totale tijd
+maal het aantal digipeaters extra.
+
+2.4.7.1.2. Tijdregelaar T2 (response delay timer)
+De tijdregelaar T2 kan in een DXE gebruikt worden om een
+bepaalde wachttijd aan te geven tussen de ontvangst en het
+bevestigen van een I-block. In deze tijdsduur kan de DXE wachten
+of er nog meer I-blocks aan hem gericht zijn om deze dan
+gezamelijk (maximaal 7) te bevestigen, inplaats van elk I-blocks
+apart. De effectiviteit van een in gebruik zijnde kanaal kan
+hierdoor aanmerkelijk worden verbeterd. In vol-duplex moeten de
+bevestigingen niet met meer als een aantal K/2 I-blocks
+vertraagd worden om een maximaal rendement te krijgen. De
+parameter K is in 2.4.7.4 nader gedefineerd.
+
+2.4.7.1.3. Tijdregelaar T3 (inactive timer)
+De derde tijdregelaar T3 wordt gebruikt om de controleren of de
+verbinding nog steeds bestaat. Het is aan te bevelen dat altijd,
+als geen I-blocks of blocks met hoog gezet P-bit onbevestigd
+zijn (tijdens de overzend-fase), steeds de toestand van het
+tegenstation wordt afgevraagd door middel van RR-of RNR-blocks
+met hoogezet P-bit. Deze tijdfunctie verzorgd de T-3 timer. 
+Deze regelaar is sterk afhankleijk van de kwaliteit van de
+level-1 verbinding. T3 moet altijd groter zijn dan T1 en kan
+zeer lang worden ingesteld op kanalen met hoge betrouwbaarheid.
+
+2.4.7.2 Maximaal aantal herhalingen. (N2)
+Het maximale aantal herhalingen wordt ingesteld met de tijdgever
+T1. Als de overdracht-kwaliteit op een kanaal te slecht is, kan
+men met behulp van N2 de verbinding afbreken.
+
+2.4.7.3 Maximaal aantal bytes in een veld (N1)
+Het maximale aantal bytes in een I-veld is in het AX.25 V-2
+op 256 vastgelegd. Versie 2 had een begrenzing op 128 bytes, de 
+originele firm-ware van de TAPR-TNC-1 liet 200 bytes toe. Werkend
+op sterk gestoorde kanalen (b.v. HF) kan het nodig zijn, N1 
+kleiner te kiezen als het protocol toelaat, om de kans groter
+te maken dat een block gaaf overkomt. In ieder geval is alleen
+een even aantal bytes (inclusief de nul) toelaatbaar. 
+
+2.4.7.4 Maximal aantal onbevestigde I-blocks (K)
+Op het moment is het maximal onbevestigde block vastgelegd op
+zeven. Eventueel kan dit in de toekomst worden aangepast. 
+
+
+literatuurlijst:
+----------------
+1. AX.25 amateur packet-radio link-layer protocol, version 2.0
+october 1984. publicatie nr. 56 arrl bibliotheek.
+
+2. X.25 schnittstelle zwischen datenend-einrichtungen und daten-
+uebertragungs-einrichtung in oeffentlichen netzen. GENEVE 1976.
+
+Voor geinteresseerden is nog een lange lijst met info
+beschikbaar. 
+
+ik hou van henki 
+

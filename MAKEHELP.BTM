@@ -1,0 +1,10 @@
+del packmon.hpc
+echo @packmon > packmon.hpc
+for %file in (*.c) makehpc %file packmon.hpc
+for %file in (*.h) makehpc %file packmon.hpc
+copy packmon.hpc e:\helppc\packmon.txt
+cdd e:\helppc
+call build
+helptsr /u
+helptsr /2
+cdd -

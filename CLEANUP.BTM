@@ -1,0 +1,9 @@
+del *.bkp
+del *.cod
+del *.map
+except (boxer.lst) del *.lst
+del *.tst
+inkey Delete log files? %%dellog
+iff "%dellog"=="Y" then
+  del *.log
+endiff

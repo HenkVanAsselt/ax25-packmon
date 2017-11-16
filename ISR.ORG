@@ -1,0 +1,1010 @@
+PAGE 72,132
+TITLE HvA Packet Monitor Interrupt
+
+;*#+File*********************************************************
+;
+; FILE: ISR.ASM
+;
+; DESC: Interrupt service routines for HvA packet monitor
+;
+; HIST: 940118 V0.1 - Initial version
+;
+;*#-File*********************************************************
+
+Dosseg                        ;Use standard segmentation
+.Model Large,C
+.Data
+
+INCLUDE ISR.INC
+
+;-------------------------------
+; Primary parameters
+;-------------------------------
+packet_int_no   db 60h  ;software interrupt
+com_irq         db 3    ;COM port IRQ
+com_base        dw 2f8h ;COM port base
+bit_rate        dw 1200 ;bps
+tx_head         dw 480  ;transmition header length in bits
+tx_tail         dw 24   ;transmition tail length in bits
+slot_time       db 120  ;slot time for carrier sensing in bits
+persistance     db 64   ;p-persistence
+carrier_sense   db 2    ;carrier sensing
+                        ;0 - don't care - just transmit (full duplex)
+                        ;1 - sense DCD line
+                        ;2 - sense data transitions (BAYCOM-like)
+                        ;3 - deliver from data analysis
+
+;--------------------------------
+; Make primary parameters public
+;--------------------------------
+PUBLIC packet_int_no, com_irq, com_base, bit_rate
+PUBLIC tx_head, tx_tail, slot_time, persistance, carrier_sense
+
+;------------------------------------------------
+;secondary parameters computed from primary ones
+;------------------------------------------------
+irq_mask        db 0    ;IRQ mask for 8259
+cl_bit_len      dw 0    ;bit len in system clock (8253/4) ticks
+cl_bit_len_2    dw 0    ;half bit len in clock ticks
+bd_slot_time    dw 0    ;slot time in baud generator ticks / 8
+bd_bit_len      db 0    ;bit len in baud generator ticks / 8
+
+even
+save_IER        db 0
+save_LCR        db 0
+save_MCR        db 0
+save_DLL        db 0
+save_DLM        db 0
+save_irq_en     db 0FFh ;save irq enabled in 8259
+
+Old_COM_ISR EQU THIS DWORD
+Old_COM_ISR_off  DW 0   ; offset address
+Old_COM_ISR_seg  DW 0   ; segment address
+
+PUBLIC Old_COM_ISR, Old_COM_ISR_seg, Old_COM_ISR_off
+
+OldTimerISR EQU THIS DWORD
+Old_Timer_off    DW 0 ; offset address
+Old_Timer_seg    DW 0 ; segment address
+
+PUBLIC OldTimerISR, Old_Timer_seg, Old_Timer_off
+
+RxBufferLen equ 1023                ;in words, must be 2^n-1
+RxBuffer   dw RxBufferLen+1 dup(0)  ;Rx buffer storing periods between
+                                    ;CTS transitions
+                                    ;this buffer is filled by CTS transitions
+                                    ;interrupt routine and flushed
+                                    ;by system timer service routine
+RxReadPtr  dw 0                     ;read pointer
+RxWritePtr dw 0                     ;write pointer
+
+even
+prev_timer_count dw 0
+TimerISRActive   db 0          ; Flag to see if we are already in TimerISR
+
+even
+DataTransCount  dw 0        ;count input signal transitions
+PeriodDevSum    dw 0,0      ;sums period deviations from round bit lenghts
+
+MaxFrameLen equ 2050                    ;maximum frame length in bytes
+ even
+RxFrameData     db  MaxFrameLen dup(0)  ;frame buffer
+RxFrameLen      dw  0                   ;actual frame length (counts bytes)
+RxBitCount      db  0                   ;count single data bits
+RxFrameValid    db  0                   ;non-zero if frame is valid
+SamplePhase     dw  0                   ;time to next sampling point
+SampleLevel     dw  0
+RxByteReg       db  0
+RxStuffing      db  0
+RxShiftReg      db  0
+
+PUBLIC RxFrameLen,RxBitCount,RxFrameValid
+
+even
+statistics_list label   dword   ;statistics structure
+packets_in  dw  0,0             ;as in packet driver specification
+packets_out dw  0,0
+bytes_in    dw  0,0
+bytes_out   dw  0,0
+errors_in   dw  0,0
+errors_out  dw  0,0
+packets_dropped dw  0,0
+
+PUBLIC packets_in,bytes_in,errors_in,packets_dropped
+
+;extended statistics
+;PTT_pushes dw  0,0
+;HDLC_flags dw  0,0
+;frame_aborts   dw  0,0
+;short_packets  dw  0,0 ;count valid but too short packets
+
+.XLIST
+INCLUDE crc.inc     ; CRC Table
+.LIST
+
+PAGE
+.Code
+;--#+func----------------------------------------------------------------
+;    FUNCTION: CRCPass
+;     PURPOSE: Calculate CRC from table
+;      SYNTAX: in: dx = partial CRC
+;                  ah = char to process
+; DESCRIPTION: CRC in DX must be initialized with 0FFFFh
+;              and inverted after passing through all characters
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+CRCPass         PROC FAR
+    push bx
+    push ax
+    xor dl,ah
+    mov bl,dl
+    xor bh,bh
+    add bx,bx
+    mov dl,dh
+    xor dh,dh
+    xor dx,[CRCtable+bx]
+    pop ax
+    pop bx
+    ret
+
+CRCPass ENDP
+
+PAGE
+;--#+func----------------------------------------------------------------
+;    FUNCTION: COM_ISR
+;     PURPOSE: COM interrupt service routine
+;      SYNTAX:
+; DESCRIPTION:
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+                        PUBLIC COM_ISR
+COM_ISR                 PROC FAR
+
+    ;--------------------
+    ; Save registers
+    ;--------------------
+    push ax
+    push bx
+    push cx
+    push dx
+    push ds
+
+   ; mov ax,cs           ; copy cs to ds
+   ; mov ds,ax
+
+    ;----------------------------------
+    ; Check if COM interrupt is pending
+    ;----------------------------------
+    mov dx,com_base
+    add dx,2            ;dx=IIR
+    in al,dx            ;load IIR
+    test al,000000001b  ;COM interrupt pending ?
+    jnz No_COM_Service  ;jump if not
+
+    ;---------------------------------
+    ; Yes, disable all COM interrupts
+    ;---------------------------------
+    dec dx              ;dx=IER
+    xor al,al
+    out dx,al           ;disable all COM interrupts
+    inc dx
+
+    ;---------------------------------
+    ; now check for possible
+    ; interrupts sources
+    ; (dx=IIR and may not be changed)
+    ;---------------------------------
+    push dx
+    call FAR PTR serv_modem_state   ; Check and handle CTS change
+    call FAR PTR serv_tx_empty      ; Check and handle THRE (Tx data send)
+    pop dx
+
+    ;--------------------------------
+    ;tell the interrupt controler
+    ;that interrupt service is done.
+    ;--------------------------------
+    mov al,20h
+    out 20h,al
+
+    ;---------------------------------------------
+    ; enable TxEmpty and Modem Status interrupts
+    ;---------------------------------------------
+    dec dx              ;dx=IER
+    mov al,0Ah
+    out dx,al
+    inc dx
+
+    ;-------------------------------
+    ; Restore saved regs and return
+    ;-------------------------------
+End_ISR:
+    pop ds
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    iret
+
+    ;------------------------------------------------
+    ; No COM interrupt pending.
+    ; Tell Interrupt controller that the interrupt
+    ; service is done and return from this ISR
+    ;------------------------------------------------
+No_COM_Service:
+    mov al,20h
+    out dx,al
+    jmp End_ISR
+
+COM_ISR ENDP
+
+PAGE
+;--#+func----------------------------------------------------------------
+;    FUNCTION: serv_modem_state
+;     PURPOSE: Service modem status interrupt
+;      SYNTAX: in: dx = IIR
+; DESCRIPTION: When called, dx should point to the IIR of the UART
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+serv_modem_state            PROC FAR
+
+    ;--------------------------------------------
+    ; Check if CTS changed state (= incoming data
+    ;--------------------------------------------
+    add dx,4                ;dx=MSR
+    in al,dx                ;read MSR
+    sub dx,4                ;dx=IIR
+    test al,00000001b       ;did CTS change state ?
+    jz serv_modem_state_ret ;jump if not
+
+    ;----------------------------------------------
+    ; CTS has changed state
+    ; Calculate time elapsed from last state change
+    ;-----------------------------------------------
+    xor al,al               ;read system timer count
+    out 43h,al
+    in al,40h
+    xchg al,ah
+    in al,40h
+    xchg al,ah                      ;Timer value in ax now
+    mov bx,ax                       ;subtract previous count
+    xchg ax,prev_timer_count        ;(Timer counts _down_ !!!)
+    sub ax,bx                       ;now ax contains the period elapsed
+    shr ax,1
+    call FAR PTR StoreRxPeriod      ;Store measured period in circular buffer
+    call FAR PTR UpdateDataStat     ;Update data status information
+
+serv_modem_state_ret:
+    ret                            ;dx=IIR again
+
+serv_modem_state ENDP
+
+PAGE
+;--#+func----------------------------------------------------------------
+;    FUNCTION: StoreRxPeriod
+;     PURPOSE: Store the period, elapsed since the last state change
+;              of the CTS signal in a circular buffer (RxBuffer)
+;      SYNTAX:
+; DESCRIPTION: this routine discards the oldest period when
+;              the buffer overflows
+;              Must not modify dx,cx
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+StoreRxPeriod               PROC FAR
+
+    mov [RxBuffer+bx],ax    ;store the period
+    add bx,2                ;increment the pointer
+    and bx,2*RxBufferLen    ;turn it around if needed
+    mov RxWritePtr,bx       ;save it
+    cmp bx,RxReadPtr        ;same as ReadPtr ?
+    jnz RxStore_ret         ;jump if not
+    mov bx,RxReadPtr
+    add bx,2                ;increment the read pointer
+    and bx,2*RxBufferLen    ;and turn it around
+    mov RxReadPtr,bx
+RxStore_ret:
+    ret
+
+StoreRxPeriod ENDP
+
+PAGE
+;--#+func----------------------------------------------------------------
+;    FUNCTION: UpdateDataStat
+;     PURPOSE:
+;      SYNTAX: in: ax = period
+; DESCRIPTION: 1) Increments data transition counter
+;              2) If carrier mode 3, then data analysis will calculate
+;                 the period deviation (summed)
+;     RETURNS: ax,bx modified
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+UpdateDataStat              PROC FAR
+
+    inc DataTransCount      ;increment data transition counter
+    mov bl,carrier_sense    ;check carrier mode
+    cmp bl,3                ;execute the rest only if carrier mode is 3
+    jnz UpdateDataStat_ret  ;(mode 3 = deliver from data analysis)
+
+    ;-------------------------------
+    ; Data analysis of PeriodDevSum
+    ;-------------------------------
+    push dx                 ;save DX
+    xor dx,dx               ;DX = 0
+    add ax,cl_bit_len_2     ;period+=cl_bit_len/2
+    mov bx,cl_bit_len
+    div bx                  ;dx=period div cl_bit_len
+    shr bx,1                ;bx=cl_bit_len/2
+    sub dx,bx               ;dx-=cl_bit_len/2
+    jnc UpdateDevSum        ;if result negative
+      neg dx                ;then negate dx
+UpdateDevSum:
+    xor ax,ax               ;add dx to PeriodDevSum
+    add PeriodDevSum,dx     ;PeriodDevSum sums deviation of periods
+    adc PeriodDevSum+2,ax   ;from multiple bit lengths
+    pop dx                  ;restore DX
+
+UpdateDataStat_ret:         ;Return from subroutine with
+    ret                     ;ax,bx modified
+
+UpdateDataStat              ENDP
+
+PAGE
+;--#+func----------------------------------------------------------------
+;    FUNCTION: Timer_ISR
+;     PURPOSE: Timer Interrupt Service Routine (Vector 8)
+;      SYNTAX:
+; DESCRIPTION:
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+                                PUBLIC Timer_ISR
+Timer_ISR                       PROC FAR
+
+    ;sti                        ;shall we enable interrupts already here ?
+
+    PUSH_ALL                    ; Save registers
+
+;    pushf                       ;first call the old routine
+;    call FAR PTR OldTimerISR
+
+    mov al,TimerISRActive       ;check for possible recursive call
+    and al,al
+    jnz TimerISR_Already_Active ;jump if it is so
+
+    mov al,0FFh                 ;mark Timer ISR as really active
+    mov TimerISRActive,al
+    sti                         ;enable interrupts so Tx and Rx can run
+                                ;while we process data collected by Rx
+
+ReadNextRxPeriod:
+    call FAR PTR ReadRxPeriod   ;read next Rx period into ax
+    jnc TimerISR_end            ;jump if buffer empty
+    call FAR PTR ProcessPeriod  ;here we process the period
+    jmp ReadNextRxPeriod        ;loop
+
+TimerISR_end:
+    xor al,al
+    mov TimerISRActive,al
+
+TimerISR_Already_Active:
+
+    POP_ALL                     ; Restore registers
+    iret
+
+Timer_ISR ENDP
+
+PAGE
+;--#+func----------------------------------------------------------------
+;    FUNCTION: ReadRxPeriod
+;     PURPOSE: Read from a circular buffer the first period stored. This
+;              period is the time elapsed between 2 state changes of CTS.
+;      SYNTAX:
+; DESCRIPTION: Modifies only ax
+;     RETURNS: if carry is 0 => then buffer was empty
+;              otherwise ax = period
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+ReadRxPeriod                PROC FAR
+    push bx
+    mov bx,RxReadPtr        ;load read pointer
+    cmp bx,RxWritePtr       ;same as write pointer ?
+    jz RxRead_ret           ;jump if so
+      mov ax,[RxBuffer+bx]  ;read the period
+      add bx,2              ;increase the pointer
+      and bx,2*RxBufferLen  ;turn it around
+      mov RxReadPtr,bx      ;save it
+      stc                   ;set carry => data is in ax
+RxRead_ret:
+    pop bx
+    ret
+
+ReadRxPeriod ENDP
+
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: ProcessPeriod()
+;     PURPOSE:
+;      SYNTAX: in: ax = period
+; DESCRIPTION:
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+ProcessPeriod           PROC FAR
+
+    mov cx,SampleLevel  ;bit 0,cl=level, bit 0,ch=previous level
+    xor cl,1            ;flip level
+    mov dx,SamplePhase  ;dx=time to next sample
+MoveSampling:
+      cmp ax,dx         ;compare SamplePhase with period
+      jc PeriodLower    ;jump if Period lower
+      sub ax,dx         ;subtract SamplePhase from period
+      xor ch,cl         ;xor level with previous level
+      call FAR PTR NewRxBit     ;analyze bit in bit 0,ch
+      mov ch,cl         ;previous level = level
+      mov dx,cl_bit_len ;load SamplePhase with bit length
+      jmp MoveSampling  ;loop
+PeriodLower:
+    sub dx,ax           ;subtract period form SamplePhase
+    mov SampleLevel,cx  ;save SampleLevel
+                        ;rather primitive DPLL
+    mov ax,cl_bit_len_2 ;load half bit period
+    sub ax,dx           ;subtract SamplePhase
+                        ;now: dx=SamplePhase, ax=phase error
+    mov cl,2            ;divide the error by 4
+    sar ax,cl
+    add dx,ax           ;add correction to SamplePhase
+    mov SamplePhase,dx  ;save SamplePhase
+    ret
+
+ProcessPeriod ENDP
+
+PAGE
+;--#+func----------------------------------------------------------------
+;    FUNCTION: NewRxbit
+;     PURPOSE: Analyze bit in 0,ch
+;      SYNTAX:
+; DESCRIPTION: bit 0,ch = _inverted_ data bit to
+;              append to the frame
+;              ax,cx,dx must not be modified
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+NewRxBit                    PROC FAR
+
+
+    push ax
+    push cx
+    push dx
+    mov al,RxShiftReg       ;load shift reg.
+    shl al,1                ;append data bit (which is still inverted)
+    or al,ch
+    mov RxShiftReg,al       ;save shift reg.
+    cmp al,81h              ;check for HDLC flag (01111110 pattern)
+    jz RxFoundFlag          ;jump if so
+    test al,7Fh             ;check for invalid frame (7 1s in a row)
+    jz RxFrameInvalid       ;jump if so
+
+    mov al,RxFrameValid     ;is frame still valid ?
+    and al,al
+    jz NewRxBit_ret         ;jump if so
+    xor ch,1                ;invert bit to append (it was inverted at entry)
+    mov al,RxByteReg        ;load byte reg.
+    mov ah,RxBitCount
+    and ch,1                ;zero to append ?
+    jz AppendZeroBit
+    ror ch,1                ;carry=data bit (must be 1 here...)
+    rcr al,1                ;append data bit to byte buffer
+    inc ah                  ;increase bit counter
+    inc RxStuffing          ;increase stuffing flag
+    jmp short CheckBitCount
+
+AppendZeroBit:
+    xor cl,cl
+    mov ch,RxStuffing       ;check for stuffing
+    cmp ch,5
+    mov RxStuffing,cl       ;clear stuffing flag
+    jz NewRxBit_ret         ;avoid adding zero bit
+      shr al,1              ;append zero bit
+      inc ah
+
+CheckBitCount:
+    mov RxByteReg,al        ;save byte reg.
+    mov RxBitCount,ah       ;save bit counter
+    test ah,07h             ;check for byte boundary
+    jnz NewRxBit_ret
+      mov bx,RxFrameLen     ;load frame length
+      cmp bx,MaxFrameLen    ;check frame size
+      jnc RxFrameInvalid    ;jump if frame would exceed max. length
+      mov [RxFrameData+bx],al
+      inc bx
+      mov RxFrameLen,bx     ;save new frame length
+NewRxBit_ret:
+    pop dx
+    pop cx
+    pop ax
+    ret
+
+RxFrameInvalid:
+    xor al,al
+    mov RxFrameValid,al
+    jmp NewRxBit_ret
+RxFoundFlag:
+    mov al,RxFrameValid ;frame valid ?
+    and al,al
+    jz PrepareNewFrame  ;jump if not valid
+    mov al,RxBitCount   ;check bit count
+    inc al
+    test al,07h         ;check if multiply of 8
+    jnz PrepareNewFrame ;jump if not
+    mov cx,RxFrameLen   ;check frame length
+    cmp cx,17
+    jc PrepareNewFrame  ;jump if length less then 17 bytes
+    mov dx,0FFFFh       ;initialize CRC
+    mov bx,offset RxFrameData      ;pass all frame bytes through CRC except last two
+    sub cx,2            ;decrease length by 2
+
+PassNextRxByte:
+      mov ah,[bx]       ;load next byte
+      inc bx
+      call FAR PTR CRCPass  ;pass it through CRC
+    loop PassNextRxByte
+    not dx              ;negate CRC
+    cmp dl,[bx]         ;check lower CRC byte
+    jnz BadCRCFrame     ;jump if bad
+    inc bx
+    cmp dh,[bx]         ;check high CRC byte
+    jnz BadCRCFrame     ;jump if bad
+
+;Frame is OK !!! - do the upcall to the application layer.
+    call FAR PTR DoUpCall
+
+PrepareNewFrame:
+    xor ax,ax       ;null frame lemgth
+    mov RxFrameLen,ax
+    mov RxBitCount,al   ;null bit count
+    mov RxStuffing,al   ;initialize bit stuffing
+    mov al,0FFh
+    mov RxFrameValid,al ;mark frame as valid
+    jmp NewRxBit_ret
+
+BadCRCFrame:                ;shall we really count bad CRC packets
+                            ;as "errors_in" ?
+
+    mov bx,offset errors_in ;increment "errors_in"
+    call FAR PTR inc_dword_bx
+
+    jmp PrepareNewFrame     ;abort current frame and make ready for new one
+
+
+NewRxBit ENDP
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: DoUpCall
+;     PURPOSE:
+;      SYNTAX: in: RxFrameData contains a valid packet (CRC is OK)
+;                  RxFrameLen contains its length
+; DESCRIPTION:
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+DoUpCall:
+
+    push ds
+    push es
+    push si
+    push di
+
+    mov bx,offset packets_in    ;increment input packet counter
+    call FAR PTR inc_dword_bx
+
+    mov cx,RxFrameLen           ;load packet length
+    sub cx,2                    ;exclude CRC
+
+    mov ax,cx                   ;increment input bytes counter by packet length
+    mov bx,offset bytes_in
+    call FAR PTR inc_dword_bx_by_ax
+
+;    mov ax,receive_upcall       ;is there a valid upcall address ?
+;    or ax,receive_upcall+2
+;    jz drop_packet              ;jump if there is not
+
+;    mov ax,0                    ;flag=0 - first upcall
+;    mov bx,0                    ;handle = 0
+;    mov di,0                    ;set es:di = NULL
+;    mov es,di
+;    call dword ptr [receive_upcall] ;first upcall
+;    mov ax,es                   ;check if application returned
+;    or ax,di                    ;valid buffer pointer
+;    jz drop_packet              ;jump if not
+;   jz DoUpCall_ret
+
+;    mov si,di                   ;make si=di before we alter di (for second upcall)
+;    mov bx,offset RxFrameData   ;copy the packet to es:di
+;    mov cx,RxFrameLen           ;packet length (exclude CRC)
+;    sub cx,2
+;CopyLoop: mov al,[bx]           ;loop over packet bytes
+;      inc bx                    ;would movsb do the job ?
+;      mov es:[di],al
+;      inc di
+;      loop CopyLoop
+;    mov cx,RxFrameLen           ;again packet len for second call
+;    sub cx,2                    ;and without CRC
+;    mov ax,es                   ;make ds=es (ds not same as cs now !)
+;    mov ds,ax
+;    mov bx,0                    ;handle 0
+;    mov ax,1                    ;flag=1 - second upcall
+;    call dword ptr cs:[receive_upcall]  ;second upcall
+;we have to use cs: addressing in above call because we modified ds
+
+DoUpCall_ret:
+    pop di
+    pop si
+    pop es
+    pop ds
+    ret
+
+drop_packet:
+    mov bx,offset packets_dropped   ;increment dropped packet counter
+    call FAR PTR inc_dword_bx
+    jmp DoUpCall_ret
+
+;Note that packets_dropped counts packets refused by the application
+;on the first upcall
+
+
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: serv_tx_empty
+;     PURPOSE: Service Transmitter Holding Register empty...
+;      SYNTAX: in: dx = IIR
+; DESCRIPTION:
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+serv_tx_empty    PROC FAR
+    add dx,3                ;dx=LSR
+    in al,dx
+    sub dx,3                ;dx=IIR
+    test al,00100000b       ;THRE ?
+    jz serv_tx_empty_ret    ;No, finish this routine
+      mov bx,2              ;for faster add/sub dx,2
+      sub dx,bx             ;dx=TxData
+      xor al,al             ;AL = 0
+      out dx,al             ;load Tx with 0000000 char
+      add dx,bx             ;dx=IIR
+;     call [word ptr ServTx];bx=2, dx must _not_ be modified
+
+serv_tx_empty_ret:
+    ret
+
+serv_tx_empty ENDP
+
+PAGE
+;--#+func----------------------------------------------------------------
+;    FUNCTION: Initialize_Timer
+;     PURPOSE: Save current timer ISR vector
+;              set vector to our 'Timer_ISR' routine
+;      SYNTAX:
+; DESCRIPTION:
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+                   PUBLIC Initialize_Timer
+Initialize_Timer   PROC FAR
+
+    ;--------------------
+    ; Initialize
+    ;--------------------
+    pushf
+;    push ax
+;    push dx
+    cli
+
+    push  es                  ; Get old vector
+    mov   ax,351Ch
+    int   21h
+    mov   dx,es
+    mov   ax,bx
+    pop   es
+
+    mov   Old_Timer_seg,dx        ; Store old vector
+    mov   Old_Timer_off,ax
+
+    push  ds
+    mov   ax, SEG Timer_ISR       ; Set new vector
+    mov   ds,ax
+    mov   dx, OFFSET Timer_ISR
+    mov   ax,251Ch
+    int   21h
+    pop   ds
+
+    ;--------------------
+    ; Return from routine
+    ;--------------------
+;    pop dx
+;    pop ax
+    popf
+    ret
+
+Initialize_Timer ENDP
+
+PAGE
+;--#+func----------------------------------------------------------------
+;    FUNCTION: Restore_timer
+;     PURPOSE: Restore vector to original timer ISR
+;      SYNTAX:
+; DESCRIPTION:
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+                PUBLIC Restore_Timer
+Restore_Timer   PROC FAR
+
+    ;--------------------
+    ; Initialize
+    ;--------------------
+;    pushf
+;    push ax
+;    push dx
+    cli
+
+    push  ds                ; Restore vector 8h (timer handling)
+    mov   dx, Old_Timer_off
+    mov   ax, Old_Timer_seg
+    mov   ds, ax
+    mov   ax, 251Ch
+    int   21h
+    pop   ds
+
+    ;---------------------
+    ; Return from routine
+    ;---------------------
+;    pop dx
+;    pop ax
+;    popf
+    sti
+    ret
+
+Restore_Timer ENDP
+
+PAGE
+;--#+func----------------------------------------------------------------
+;    FUNCTION: initialize_COM
+;     PURPOSE:
+;      SYNTAX:
+; DESCRIPTION: Save old COM ISR
+;              Set new COM ISR Vector
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+                        PUBLIC initialize_COM
+initialize_COM          PROC FAR
+    push ax
+    push dx
+    pushf               ;save CPU interrupt flag
+    cli                 ;disable interrupts
+
+    push  es
+    mov   al,com_irq
+    add   al,8
+    mov   ah,35h
+    int   21h
+    mov   dx,es
+    mov   ax,bx
+    mov   Old_COM_ISR_seg,dx          ; Store old vector
+    mov   Old_COM_ISR_off,ax
+    pop   es
+
+    push  ds
+    mov   ax, SEG COM_ISR         ; Set new vector
+    mov   ds,ax
+    mov   dx, OFFSET COM_ISR
+    mov   al,com_irq
+    add   al,8
+    mov   ah,25h
+    int   21h
+    pop   ds
+
+    ;----------------------
+    ; Save old IRQ mask and
+    ; set new one
+    ;----------------------
+    mov ah,irq_mask
+    not ah
+    in al,21h           ;read 8259 mask
+    or al,ah            ;extract com irq mask
+    mov save_irq_en,al  ;save it
+    in al,21h           ;enable com irq in 8259
+    and al,ah           ;by clearing the right bit.
+    out 21h,al
+
+    ;------------------
+    ;save COM registers
+    ;------------------
+    mov dx,com_base     ;dx=com_base
+    inc dx              ;dx=IER
+    in al,dx            ;save IER
+    mov save_IER,al
+    xor al,al           ;disable all COM interrupts
+    out dx,al
+
+    add dx,2            ;dx=LCR
+    in al,dx            ;save LCR
+    mov save_LCR,al
+
+    inc dx              ;dx=MCR
+    in al,dx            ;save MCR
+    mov save_MCR,al
+
+    dec dx              ;dx=LCR
+    mov al,81h
+    out dx,al           ;enable divisor read/write
+
+    sub dx,3            ;dx=com_base=DLL
+    in al,dx            ;read DLL
+    mov save_DLL,al     ;save it
+
+    inc dx              ;dx=DLM
+    in al,dx            ;read DLM
+    mov save_DLM,al     ;save it
+
+    dec dx              ;dx=com_base=DLL
+    mov ax,bd_slot_time ;set rate divisor
+    out dx,ax           ;to slot_time*bd_bit_len
+
+    add dx,3            ;dx=LCR
+    mov al,01h          ;set 6 data/1 stop/no parity format
+    out dx,al
+
+    inc dx              ;dx=MCR
+    mov al,09h          ;set DTR high, RTS low.
+    out dx,al           ;and OUT2 high
+
+    sub dx,3            ;dx=IER
+    mov al,0Ah
+    out dx,al           ;enable TxEmpty and modem status interrupt
+
+    add dx,4            ;dx=LSR
+    in al,dx            ;read LSR ;to clear possible line status int.
+
+    inc dx
+    in al,dx            ;read MSR to clear possible modem status int
+
+    sub dx,6            ;dx=com_base again
+    in al,dx            ;read Rx buffer
+    in al,dx            ;to clear any possible pending Rx int.
+
+    mov al,000000b      ;load Tx with 000000 char
+    out dx,al
+    out dx,al
+
+    ;------------------------
+    ; restore interrupt flag
+    ;------------------------
+    popf
+    pop dx
+    pop ax
+    ret
+
+initialize_COM ENDP
+
+PAGE
+;--#+func----------------------------------------------------------------
+;    FUNCTION: restore_COM
+;     PURPOSE:
+;      SYNTAX:
+; DESCRIPTION:
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+restore_COM         PROC FAR
+    pushf
+    push ax
+    push dx
+    cli
+
+    ;--------------------------
+    ; Restore interrupt vector
+    ;--------------------------
+    push ds
+    mov dx, Old_COM_ISR_off
+    mov ax, Old_COM_ISR_seg
+    mov ds, ax
+    mov al,com_irq
+    add al,8
+    mov ah,25h
+    int 21h
+    pop ds
+
+    ;--------------------
+    ; Restore IRQ mask
+    ;--------------------
+    in al,21h
+    or al,irq_mask
+    and al,save_irq_en
+    out 21h,al
+
+    ;-----------------------
+    ; Restore COM registers
+    ;-----------------------
+    mov dx,com_base
+    in al,dx        ;read Rx to clear a possible int.
+    in al,dx
+    inc dx          ;dx=IER
+    mov al,save_IER ;restore IER
+    out dx,al
+    add dx,2        ;dx=LCR
+    mov al,save_LCR ;restore LCR
+    out dx,al
+    inc dx          ;dx=MCR
+    mov al,save_MCR ;restore MCR
+    out dx,al
+    inc dx          ;dx=LSR
+    in al,dx        ;read LSR to clear possible int.
+    inc dx          ;dx=MSR
+    in al,dx        ;read MSR to clear possible int.
+    sub dx,3        ;dx=LCR
+    in al,dx        ;enable rate divisor access
+    or al,80h
+    out dx,al
+    sub dx,3        ;dx=com_base=DLL
+    mov al,save_DLL ;restore rate divisor
+    out dx,al
+    inc dx          ;dx=DLM
+    mov al,save_DLM
+    out dx,al
+    add dx,2        ;dx=LCR
+    mov al,save_LCR ;restore LCR again
+    out dx,al
+
+    pop dx
+    pop ax
+    popf
+    ret
+
+restore_COM ENDP
+
+PAGE
+;--#+func----------------------------------------------------------------
+;    FUNCTION: inc_dword_bx
+;     PURPOSE: increments dword ds:[bx] by 1
+;      SYNTAX:
+; DESCRIPTION:
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+inc_dword_bx    PROC FAR
+    add word ptr [bx],1
+    inc bx
+    inc bx
+    adc word ptr [bx],0
+    dec bx
+    dec bx
+    ret
+
+inc_dword_bx ENDP
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: inc_dword_bx_by_ax()
+;     PURPOSE: increments dword ds:[bx] by ax
+;      SYNTAX:
+; DESCRIPTION:
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+inc_dword_bx_by_ax  PROC FAR
+
+    add word ptr [bx],ax
+    inc bx
+    inc bx
+    adc word ptr [bx],0
+    dec bx
+    dec bx
+    ret
+
+inc_dword_bx_by_ax  ENDP
+
+END

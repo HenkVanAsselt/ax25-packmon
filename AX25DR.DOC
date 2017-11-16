@@ -1,0 +1,305 @@
+		AX25 driver for BAYCOM-like modem.
+		Version of 30th of August 1992
+
+Free license for this software is granted for _amateur_ use only.
+Commercial usage is prohibited.
+
+AX25.COM is a packet driver comforming (to some extend) to well known
+"FTP packet driver" specification. It's purpose is to serve as interface
+between application software (e.g. KA9Q NOS) and a modem connected
+to RS232 port (e.g. BAYCOM modem).
+
+The driver relies on the following RS232 pins:
+RTS - controls PTT: high level activates the transmitter
+DTR - transmitted data. On this pin the driver sends data
+      to be transmitted by the modem.
+      When in receive state this pin is held high.
+CTS - received data. The modem should supply here the data it receives.
+DCD - the modem may supply here "carrier detect" signal.
+      This pin is _optional_ - it is not a must because the driver
+      is able to deliver carrier signal from received data.
+GND - a common ground for the above signals.
+
+TxD outputs a signal which is in high (positive voltage)
+most of the time. A low power modem (TCM3105) can be supplied
+from RTS+DTR+TxD (adding realized with diodes).
+
+My primary intention while writting this driver was to provide
+opportunity to run KA9Q NOS with simple modems based on TCM3105
+or AM7910 chip. I tested the driver _only_ with NOS - no other software
+was available at the time. Thus I can not guarantee full compatybility
+with "FTP packet driver" definition.
+
+The driver status can be examined with PKSTAT.COM and terminated
+(removed from memory) by TERMIN.COM. These two utilities are part
+of packet drivers package from Clarkson and they should work
+with any "FTP packet driver".
+
+AX25 driver heavily relies on quick interrupt response.
+Thus the application software should avoid disabling
+CPU interrupts for long periods. Or say it in another words:
+enable interrupts whenever possible.
+
+AX25.COM has several start-time options. To see them start it
+with "-?". If you start the driver without any command line
+switch it will use default values: COM1, 1200 baud, etc.
+
+These are the options - default values are in []:
+
+-b<bit rate> [1200] - decimal number
+    defines the bit rate. Rates below 300 are not accepted
+    because of PC's timer specific features.
+    Maximum usable rate is probably 2400 but it really depends
+    on your CPU... The upper limit for this parameter is 14400.
+    "Valid" rates are only numbers which can be expressed as 14400/n.
+    If you give an "invalid" value it will be adjusted to the closest
+    "valid" one.
+
+-i<software interrupt> [60] - hexadecimal number
+    Tells the driver which software interrupt to use
+    for control functions. Usually you would use numbers
+    from 60..63 here because these are intended for user applications.
+
+-B<COM port I/O base> [3f8] - hexadecimal number
+   I/O address of RS232 port: 3f8 for COM1, 2f8 for COM2
+
+-I<COM port IRQ> [4] - hexadecimal number
+   Interrupt request line of RS232 port: 4 for COM1, 3 for COM2
+   Only the range 2..7 is supported so far. I'm not sure the irq 2
+   would work on a PC/AT.
+
+-s<slot time> [120] - decimal number 16..255
+   Slot time for p-persistance scheme. The value is in data bits.
+   For 1200 baud, slot time 120 bits means 100 ms.
+
+-p<persistance> [64] - decimal number 0..255
+   p-persistance - the higher the value the higher the probability
+   of activating PTT at a time slot.
+
+   Your station becomes more "agressive" on the air
+   with increasing persistance and decreasing slot time.
+
+-h<tx header length> [480] - decimal number 8..65535
+   Number of extra bits the transmitter sends before actuall data
+   is transmitted. This is same as TxDelay on most TNCs.
+   480 bits means 400 ms at 1200 bps.
+
+   You should always make this number as small as possible
+   for best bandwidth use. 480 tells you basicaly that 480 "useless"
+   bits (60 bytes) are being transmitted before real packet data goes out.
+
+   Unlike most TNCs this driver sends a square wave not a series
+   of HDLC flags in front of a packet. This was easier to program
+   in software and it makes DPLL lock faster at receiving end.
+   Thus less header bits should be needed...
+   
+-t<tx tail length> [24] - decimal number 8..65535
+   Number of extra bits the transmitter sends _after_ the actuall data.
+   24 bits makes 20 ms tx tail.
+
+-c<carrier sense mode> [t] - one of the following letters: f,c,t,d
+   mode      meaning           
+
+    f      full duplex - transmit whenever data is pending.
+	   This option disables carrier sensing.
+
+    c      sense modem DCD line to find out whether channel is busy or not.
+	   Your modem has to supply this signal. Note that TCM3105
+	   does not do it very well... it sets DCD to high on any noise
+	   on audio input. Am7910 is said to deliver much more reliable CD
+	   signal.
+
+    t      sense data transition - if incoming data signal moves
+	   the driver assumes that the channel is busy - BAYCOM 1.5 uses
+	   the same (or very similar) way with "CARRIER 1" switch.
+	   Use this mode if you intend to use squelch in your radio.
+
+    d      deliver "channel busy" status by analysing incoming data.
+	   BAYCOM's v1.5 "CARRIER 0" does effectively similar thing although
+	   it uses different algorithm. The driver examines the incoming
+	   signals "regularity" - if data transitions comes at regular
+	   intervals the channel is assumed busy.
+	   With this mode you may run your radio with squelch open
+	   all the time.
+	   How this option works may depend on modem type. Some modems
+	   have still very regular digital output signal even with white
+	   noise applied to the analog input.
+
+Please note that argument line is case sensitive and so are hexadecimal
+values... "2F8" will not do - you must specify "2f8".
+
+
+Frequently asked questions with answers.
+
+How to start quickly ?
+
+1. Start the ax25.com - most important parameters are COM base and irq.
+   e.g. for COM1: ax25 -B3f8 -I4
+2. Start KA9Q NOS.
+   and then type in:
+     ax25 mycall <your callsign>
+     attach packet 0x60 ax25 5 512
+     trace ax25 111
+   you should see packets being received now...
+3. Try to connect to another station by typing:
+   connect ax25 <callsign>
+
+Are there any programs the driver dislikes ?
+
+Yes, SP9AUV discovered a small and nice program saying "Good Morning"
+(in polish) disabled the driver completely on his PC. The reason is a mistery
+as the program is not even resident.
+If the driver does not work, try to start the DOS from a diskette with
+simplest possible config.sys and autoexec.bat and give the driver
+another try.
+
+How to change ax25 driver parameters ?
+
+If you realized that you have started ax25.com with not the parameters
+you liked use termin.com to terminate the driver (e.g. termin 0x60)
+and start ax25.com again with another option set.
+
+Can the ax25 driver be loaded into high RAM ?
+
+Yes, the driver can be loaded into UMB to save base memory.
+However on my 386 when I tried to get UMB using EMM386.EXE
+the driver performance become worse even when loaded into low RAM.
+After trying UMBDR521 I got more UMB space (!?) and the driver
+could run both in low and high RAM without any side effects.
+
+Can the driver work on an XT ?
+
+I can't see any reason why not (appart from CPU speed)
+but haven't got a single report about such a case.
+In contrary I'm getting lot of claims that "BAYCOM works
+but the ax25 driver does not". I don't understand why...
+
+How to check whether my PC is fast enough ?
+
+Do simple loopback by connecting DTR (data out) to CTS (data in).
+Then start the driver at 300 bps and -cf option (full duplex).
+Start the NOS, attach the packet driver (see "How to start quickly")
+and let NOS transmit few packets (for example by enabling beacon
+every 10 sek). Every packet sent should reapear as received in trace window.
+If so try higher speeds, if not either your PC is too slow or something else
+is wrong.
+
+How big packets can ax25 driver handle ?
+
+The receiver can handle 2048 byte frames.
+This include address, control and data field but not CRC.
+The transmitter buffer can hold up to about 4KB.
+That is the amount of data which can be transmitted
+per each PTT push.
+
+How to connect a modem to RS232 port ?
+
+To cooperate with ax25 driver the modem should meet some
+minimal requirements. Basic roules are:
+1. The modem must provide decoded received data on CTS pin.
+2. The driver outputs data to be transmitted on DTR pin.
+   Modem should modulate and pass this signal to the radio.
+3. Pin RTS controls the PTT of the radio. When it becomes positive
+   the radio (together with the modem) should go into transmition mode.
+4. Optionally the modem may provide carrier detect signal
+   on DCD pin.
+5. Don't forget about GND line which is the reference for all above signals
+
+BAYCOM and many other modems build around TCM3105 or AM7910/11
+for use with BAYCOM or TFPCX software conform to this scheme.
+
+If you are going to build your own modem you may encounter
+the problem of level conversion. RS232 ports of a PC
+use +/- 12 V while most modem chips need TTl levels (0..+5V).
+The most elegant solution is to use MAX232 or similar converter.
+A simpler (but not that elegant) way of doing conversion is to use
+CMOS inverters (I use 4049 with my TCM3105). Like on the picture below:
+
+
+		_____    |\
+RS232 DTR   ---|_____|---| \o_____ TTL modem TxD
+	     50 or 100 k | /
+			 |/
+
+		_____     /|
+RS232 CTS   ---|_____|--o/ |_______ TTL modem RxD
+		2.2 k    \ |
+			  \|
+
+
+		_____     /|     /|
+RS232 DCD   ---|_____|--o/ |___o/ |____ TTL modem DCD
+		2.2 k    \ |    \ |                      Modem Tx control
+			  \|      \         ____+5V__      |
+					      |   _|_      |        Radio PTT
+				   Si diode  _|_  | | 3M   |          |
+					     /_\  |_|      |          |
+		_____    |\     _____  | |+   |    |  |\   |  ___ B |/  C
+RS232 RTS   ---|_____|---| \o--|_____|-| |----|----|--| \o---|___|--|
+	     50 or 100 k | /    2.2 k  | |            | /    10 k   |\
+			 |/            10 uF          |/              | E
+								  -------
+RS232 GND ---o
+	     |
+	    _|______ 0V
+
+Inverters are supplied from 0 and +5 Volts - same levels
+as modem TTL part.
+
+The first scheme _does_ work because CMOS inputs accept voltages outside
+power supply range thanks to input protective diodes.
+The resistor limits the current flowing through these diodes.
+You _must_not_ avoid it !
+
+The second scheme does work as well because the threshold between
+logical states in PC's RS232 is a bit above 0 Volts.
+BAYCOM team recomends HC or HCT series circuits - they must have
+a reason for it but I don't know what it is...
+
+Please note that transmitted and received data polarity is not important
+in packet radio. Only transitions matters. However polarity of DCD signal
+_does_ matter.
+
+The last scheme shows PPT circuit with simple watchdog timer. It limits
+the transmition time and is recomended for unattended stations
+to protect against software failures.
+
+It is a good practice to ground unused RS232 inputs (RI, DSR, DCD).
+Due to capacitive coupling to neibour pins there may apear short spikes
+on them - these will trigger extra interrupts thus loading the CPU.
+
+Have fun and _please_ send success/failure notes
+and comments/hints/complaints to:
+
+	email:	jalocha@chopin.ifj.edu.pl
+	or	jalocha@vxcern.cern.ch
+	or	jalocha@priam.cern.ch
+	packet:	SP9VRC@SP9ZDN.POL.EU (untested yet...)
+
+my home address:   Pawel Jalocha
+		   Rynek Kleparski 14/7
+		   PL-31150 KRAKOW (Poland)
+
+Pawel, SR9VRC
+
+
+History file:
+
+First versions on 25-27 of April 1992: first approach to transmitter
+code caused inaccurate data transition timing. After fixing that bug
+another one got in: after transmiting 7KB of data the driver refuses
+to accept packets.
+
+29 April 1992:
+More-or-less stable version. Variables aligned to word boudary.
+
+4 May 1992:
+Defaults for tx head,tail and slot time are like most TNCs
+
+6 May 1992:
+Tx head, tail, slot time are printed out in bits and ms units.
+
+August 1992:
+An attempt to cure problems occuring on COM ports handling
+IIR register not as I wished they did.
+By the way minor code review.

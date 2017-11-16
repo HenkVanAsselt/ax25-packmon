@@ -1,0 +1,47 @@
+arpdump.c:
+Error arpdump.c(36): redeclaration of 'Arp_type'
+  Warning arpdump.c(85): mixing pointers to signed and unsigned char in
+	 function ntoharp
+  Warning arpdump.c(87): mixing pointers to signed and unsigned char in
+	 function ntoharp
+
+ax25.c:
+  Warning ax25.c(26): static 'text' declared but not used
+
+ax25dump.c:
+  Warning ax25dump.c(268): mixing pointers to signed and unsigned char in
+	 function DumpAX25
+
+ax25subr.c:
+  Warning ax25subr.c(23): "e:\include\ctype.h" is multiply included
+
+buf.c:
+
+heard.c:
+
+misc.c:
+
+netdump.c:
+
+packmon.c:
+  Warning packmon.c(137): degenerate unsigned comparison in function main
+
+trace.c:
+  Warning trace.c(153): 't' assigned to but not used in function DumpEntry
+  Warning trace.c(34): static 'clock_count' declared but not used
+  Warning trace.c(45): static 'StartTime' declared but not used
+
+  Warning: 'f' defined in packmon.c(42) is never used
+  Warning: 'i' defined in packmon.c(41) is never used
+  Warning: 'j' defined in packmon.c(41) is never used
+  Warning: 'buffer' defined in packmon.c(34) is never used
+  Warning: 'RXQueue' defined in packmon.c(37) is never used
+  Warning: 'Readptr' defined in packmon.c(35) is never used
+Error: 'com_base' is used but never defined
+Error: 'databuf' is used but never defined
+Error: 'Upcall' is used but never defined
+Error: 'getargs' is used but never defined
+Error: 'com_irq' is used but never defined
+Error: 'pr_usage' is used but never defined
+Error: 'Restore_COM' is used but never defined
+Error: 'Initialize_COM' is used but never defined

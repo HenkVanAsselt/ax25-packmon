@@ -1,0 +1,2591 @@
+                   EVALUATION COPY OF Xref. Please register.
+       Xref C cross ref utility v3.1 (c) 1991-1994 by David Archibald
+                      Printed on: Sat Jun 11 19:50:46 1994
+
+                      S O U R C E  F I L E  S U M M A R Y
+==============================================================================
+Module 1: CRC.C
+  Header: packmon.h
+  Header: crctab.h
+  Header: crc.h
+Module 2: PACKMON.C
+  Header: config.h
+  Header: ax25.h
+  Header: misc.h
+  Header: log.h
+  Header: heard.h
+  Header: status.h
+Module 3: NETDUMP.C
+  Header: netrom.h
+Module 4: CONFIG.C
+Module 5: ARPDUMP.C
+  Header: buf.h
+  Header: arp.h
+Module 6: AX25.C
+Module 7: STATUS.C
+Module 8: HEARD.C
+Module 9: AX25DUMP.C
+Module 10: BUF.C
+Module 11: MISC.C
+Module 12: KEY.C
+Module 13: AX25SUBR.C
+Module 14: LOG.C
+Module 15: HELP.C
+
+                   EVALUATION COPY OF Xref. Please register.
+       Xref C cross ref utility v3.1 (c) 1991-1994 by David Archibald
+                      Printed on: Sat Jun 11 19:50:46 1994
+
+              G L O B A L  V A R I A B L E S / C O N S T A N T S
+==============================================================================
+     AADDR_LEN [define]     
+        {ARPDUMP.C   }  28    56    
+     ALEN [define]     
+        {ax25.h      }  14    
+     ARC_ARP [define]     
+        {ARPDUMP.C   }  32    56    
+     ARC_IP [define]     
+        {ARPDUMP.C   }  31    56    
+     ARG [unknown]     
+        {PACKMON.C   }  57    
+     ARPLEN [define]     
+        {arp.h       }  14    
+     ARPLIFE [define]     
+        {arp.h       }  6     
+     ARP_APPLETALK [define]     
+        {arp.h       }  35    
+     ARP_ARCNET [define]     
+        {arp.h       }  34    
+     ARP_AX25 [define]     
+        {arp.h       }  30    
+     ARP_CHAOS [define]     
+        {arp.h       }  32    
+     ARP_EETHER [define]     
+        {arp.h       }  29    
+     ARP_ETHER [define]     
+        {arp.h       }  28    
+     ARP_IEEE802 [define]     
+        {arp.h       }  33    
+     ARP_NETROM [define]     
+        {arp.h       }  27    
+     ARP_PENDING [define]     
+        {arp.h       }  77    
+     ARP_PRONET [define]     
+        {arp.h       }  31    
+     ARP_QUEUE [define]     
+        {arp.h       }  10    
+     ARP_REPLY [define]     
+        {arp.h       }  22    
+        {ARPDUMP.C   }  162   
+     ARP_REQUEST [define]     
+        {arp.h       }  21    
+        {ARPDUMP.C   }  159   
+     ARP_TYPE [define]     
+        {ARPDUMP.C   }  26    50    
+     ARP_VALID [define]     
+        {arp.h       }  78    
+     AXALEN [define]     
+        {ax25.h      }  15    
+        {ARPDUMP.C   }  49    52    
+        {AX25SUBR.C  }  28    
+     AXBUF [define]     
+        {ax25.h      }  16    
+     Arp_stat [arp_stat]     
+        {arp.h       }  95    
+     Arp_tab [arp_tab]     
+        {arp.h       }  84    
+     Arp_type [arp_type]     
+        {ARPDUMP.C   }  48    132   
+     Arptypes [char]     
+        {ARPDUMP.C   }  36    137   
+     Ax25multi [char]     
+        {AX25SUBR.C  }  28    55    
+     BINARY [define]     
+        {packmon.h   }  86    
+     COMMAND [define]     
+        {ax25.h      }  65    
+        {AX25.C      }  91    
+        {AX25DUMP.C  }  181   
+     CONNECTED [define]     
+        {packmon.h   }  77    
+     CR [define]     
+        {MISC.C      }  18    70    71    74    
+     DISC [define]     
+        {ax25.h      }  56    
+        {AX25DUMP.C  }  112   
+     DISCONNECTED [define]     
+        {packmon.h   }  74    
+     DISCONNECTPEND [define]     
+        {packmon.h   }  76    
+     DM [define]     
+        {ax25.h      }  57    
+        {AX25DUMP.C  }  113   
+     DONT_SKIP_THIS [unknown]     
+        {NETDUMP.C   }  181   
+        {arp.h       }  47    106   
+        {AX25SUBR.C  }  170   
+     DUMP_HEADER [define]     
+        {ax25.h      }  19    
+        {AX25.C      }  52    58    
+        {AX25DUMP.C  }  254   283   
+        {LOG.C       }  190   
+     DUMP_INFO [define]     
+        {ax25.h      }  20    
+        {AX25.C      }  52    58    
+        {HEARD.C     }  271   
+        {AX25DUMP.C  }  270   283   
+        {LOG.C       }  190   256   
+     EADDR_LEN [define]     
+        {ARPDUMP.C   }  22    50    
+     EOL_CR [define]     
+        {packmon.h   }  81    
+        {NETDUMP.C   }  182   
+        {AX25DUMP.C  }  286   
+        {AX25SUBR.C  }  74    
+     EOL_CRLF [define]     
+        {packmon.h   }  83    
+     EOL_LF [define]     
+        {packmon.h   }  82    
+        {AX25SUBR.C  }  80    
+     EXTERN [define]     
+        {packmon.h   }  18    57    58    62    64    66    67    68    69    
+                        70    71    124   125   
+     F1 [unknown]     
+        {KEY.C       }  27    
+     FALSE [define]     
+        {packmon.h   }  12    13    
+        {NETDUMP.C   }  82    
+        {HEARD.C     }  162   
+        {AX25DUMP.C  }  105   
+     FRMR [define]     
+        {ax25.h      }  59    
+        {AX25DUMP.C  }  115   
+     HEARD_BEACON [define]     
+        {heard.h     }  46    
+        {HEARD.C     }  256   333   
+     HEARD_BIN [define]     
+        {heard.h     }  43    
+        {HEARD.C     }  261   327   
+     HEARD_CODE [define]     
+        {heard.h     }  40    
+        {HEARD.C     }  321   
+     HEARD_CQ [define]     
+        {heard.h     }  44    
+        {HEARD.C     }  248   329   
+     HEARD_DIGI [define]     
+        {heard.h     }  36    
+     HEARD_DIRECT [define]     
+        {heard.h     }  35    
+        {HEARD.C     }  228   307   
+     HEARD_FBB [define]     
+        {heard.h     }  42    
+        {HEARD.C     }  244   325   
+     HEARD_ID [define]     
+        {heard.h     }  45    
+        {HEARD.C     }  252   331   
+     HEARD_INFO [define]     
+        {heard.h     }  39    
+        {HEARD.C     }  214   
+     HEARD_IP [define]     
+        {heard.h     }  37    
+        {HEARD.C     }  317   
+     HEARD_LIST_EMPTY [define]     
+        {heard.h     }  56    
+        {HEARD.C     }  115   172   
+     HEARD_LIST_FULL [define]     
+        {heard.h     }  57    
+        {HEARD.C     }  123   176   
+     HEARD_MAIL [define]     
+        {heard.h     }  41    
+        {HEARD.C     }  240   323   
+     HEARD_NETROM [define]     
+        {heard.h     }  38    
+        {HEARD.C     }  217   319   
+     HEARD_NOT_FOUND [define]     
+        {heard.h     }  55    
+        {HEARD.C     }  121   184   
+     HEX [unknown]     
+        {LOG.C       }  181   
+     H_BYTE [unknown]     
+        {PACKMON.C   }  59    
+     H_WORD [unknown]     
+        {PACKMON.C   }  60    
+     I [define]     
+        {ax25.h      }  49    
+        {AX25.C      }  144   
+        {HEARD.C     }  211   264   
+        {AX25DUMP.C  }  107   194   
+        {AX25SUBR.C  }  99    
+     IPALEN [define]     
+        {arp.h       }  17    
+     IP_TYPE [define]     
+        {ARPDUMP.C   }  25    50    
+     LF [define]     
+        {MISC.C      }  19    70    75    
+     LOG_C [define]     
+        {log.h       }  31    
+        {LOG.C       }  22    
+     MAIL [unknown]     
+        {HEARD.C     }  239   
+     MAINFILE [define]     
+        {PACKMON.C   }  30    
+     MAXCLEN [define]     
+        {ax25.h      }  46    94    
+        {AX25.C      }  106   113   127   
+        {AX25SUBR.C  }  120   129   
+     MAXDIGIS [define]     
+        {ax25.h      }  13    104   105   
+        {AX25.C      }  126   134   
+     MAXHEARD [define]     
+        {heard.h     }  21    
+        {HEARD.C     }  68    75    117   140   
+     MAXHWALEN [define]     
+        {arp.h       }  18    62    64    
+     MAXID [define]     
+        {log.h       }  11    23    
+        {heard.h     }  20    31    
+     MAXXSIZE [unknown]     
+        {CONFIG.C    }  41    43    45    
+        {HELP.C      }  25    
+     MAXYSIZE [unknown]     
+        {CONFIG.C    }  41    43    
+        {HELP.C      }  25    
+     MAX_MULTI_ADDR [define]     
+        {ax25.h      }  33    
+        {AX25SUBR.C  }  54    
+     MA_ALL [define]     
+        {ax25.h      }  44    
+     MA_BEACON [define]     
+        {ax25.h      }  42    
+     MA_CQ [define]     
+        {ax25.h      }  41    
+     MA_ID [define]     
+        {ax25.h      }  39    
+     MA_MAIL [define]     
+        {ax25.h      }  38    
+     MA_NODES [define]     
+        {ax25.h      }  37    
+     MA_NONE [define]     
+        {ax25.h      }  34    
+        {AX25SUBR.C  }  58    
+     MA_OPEN [define]     
+        {ax25.h      }  40    
+     MA_QST [define]     
+        {ax25.h      }  36    
+     MA_RMNC [define]     
+        {ax25.h      }  43    
+     NETROM [unknown]     
+        {packmon.h   }  39    
+     NHWTYPES [define]     
+        {arp.h       }  37    
+        {ARPDUMP.C   }  48    131   137   
+     NR3DLEN [define]     
+        {netrom.h    }  32    
+     NR3HLEN [define]     
+        {netrom.h    }  31    
+     NR3NODEHL [define]     
+        {netrom.h    }  35    
+     NR3NODESIG [define]     
+        {netrom.h    }  33    
+        {NETDUMP.C   }  89    
+     NR3POLLSIG [define]     
+        {netrom.h    }  34    
+        {NETDUMP.C   }  107   
+     NRDESTPERPACK [define]     
+        {netrom.h    }  41    
+     NRNUMCHAINS [define]     
+        {netrom.h    }  37    
+     NRPROTO_IP [define]     
+        {netrom.h    }  47    
+     NRRTDESTLEN [define]     
+        {netrom.h    }  39    
+     NULLARP [define]     
+        {arp.h       }  83    
+     NULLATYPE [define]     
+        {arp.h       }  53    
+        {ARPDUMP.C   }  134   143   149   
+     NULLCHAR [define]     
+        {ARPDUMP.C   }  21    49    51    53    54    55    57    
+     PENDTIME [define]     
+        {arp.h       }  8     
+     PF [define]     
+        {ax25.h      }  61    
+        {AX25DUMP.C  }  179   
+        {AX25SUBR.C  }  102   
+     PID_APPLEARP [define]     
+        {ax25.h      }  78    
+        {AX25DUMP.C  }  145   
+     PID_APPLETALK [define]     
+        {ax25.h      }  77    
+        {AX25DUMP.C  }  141   
+     PID_ARP [define]     
+        {ax25.h      }  80    
+        {ARPDUMP.C   }  52    
+        {AX25DUMP.C  }  153   279   
+     PID_IP [define]     
+        {ax25.h      }  79    
+        {ARPDUMP.C   }  52    
+        {AX25DUMP.C  }  149   
+     PID_LQ [define]     
+        {ax25.h      }  76    
+        {AX25DUMP.C  }  137   
+     PID_NETROM [define]     
+        {ax25.h      }  82    84    
+        {HEARD.C     }  216   
+        {AX25DUMP.C  }  161   273   
+     PID_NO_L3 [define]     
+        {ax25.h      }  83    
+        {AX25DUMP.C  }  165   
+     PID_RARP [define]     
+        {ax25.h      }  81    
+        {ARPDUMP.C   }  52    
+        {AX25DUMP.C  }  157   
+     PID_SEGMENT [define]     
+        {ax25.h      }  74    
+        {AX25DUMP.C  }  129   
+     PID_TEXNET [define]     
+        {ax25.h      }  75    
+        {AX25DUMP.C  }  133   
+     PID_TEXT [define]     
+        {ax25.h      }  85    
+        {AX25DUMP.C  }  276   
+     PID_X25 [define]     
+        {ax25.h      }  73    
+        {AX25DUMP.C  }  125   
+     Ptr2 [unknown]     
+        {packmon.h   }  68    
+     RECOVERY [define]     
+        {packmon.h   }  78    
+     REJ [define]     
+        {ax25.h      }  53    
+        {AX25DUMP.C  }  110   
+     REPEATED [define]     
+        {ax25.h      }  70    
+        {AX25.C      }  120   130   
+     RESPONSE [define]     
+        {ax25.h      }  66    
+        {AX25.C      }  90    
+        {AX25DUMP.C  }  182   
+     REVARP_REPLY [define]     
+        {arp.h       }  24    
+        {ARPDUMP.C   }  168   
+     REVARP_REQUEST [define]     
+        {arp.h       }  23    
+        {ARPDUMP.C   }  165   
+     REVARP_TYPE [define]     
+        {ARPDUMP.C   }  27    50    
+     RNR [define]     
+        {ax25.h      }  52    
+        {AX25DUMP.C  }  109   
+     RR [define]     
+        {ax25.h      }  51    
+        {AX25DUMP.C  }  108   
+     RXCRCErr [long]     
+        {packmon.h   }  125   
+        {AX25.C      }  57    
+        {STATUS.C    }  41    
+        {LOG.C       }  30    
+     RXCount [long]     
+        {packmon.h   }  124   
+        {AX25.C      }  51    
+        {STATUS.C    }  40    
+        {LOG.C       }  29    
+     RXQueue [ax25_level1]     
+        {PACKMON.C   }  42    
+     Rarp_stat [arp_stat]     
+        {arp.h       }  95    
+     Readptr [int]     
+        {PACKMON.C   }  40    
+     RxBuffer [unknown]     
+        {packmon.h   }  66    
+     RxFrameData [unknown]     
+        {packmon.h   }  67    
+     RxFrameLen [unknown]     
+        {packmon.h   }  62    
+     S [define]     
+        {ax25.h      }  50    
+     SABM [define]     
+        {ax25.h      }  55    
+        {AX25DUMP.C  }  111   
+     SETUP [define]     
+        {packmon.h   }  75    
+     SSIDMASK [define]     
+        {ax25.h      }  69    
+        {AX25.C      }  108   115   129   
+     TABSIZE [unknown]     
+        {PACKMON.C   }  104   107   
+     TEXT [define]     
+        {packmon.h   }  87    
+     TRUE [define]     
+        {packmon.h   }  13    
+        {NETDUMP.C   }  140   162   
+        {HEARD.C     }  174   182   186   
+        {AX25DUMP.C  }  107   116   
+        {AX25SUBR.C  }  164   
+        {LOG.C       }  68    
+     U [define]     
+        {ax25.h      }  54    
+        {AX25DUMP.C  }  190   
+     UA [define]     
+        {ax25.h      }  58    
+        {AX25DUMP.C  }  114   
+     UI [define]     
+        {ax25.h      }  60    
+        {AX25.C      }  145   
+        {HEARD.C     }  212   264   
+        {AX25DUMP.C  }  116   
+     UNKNOWN [define]     
+        {ax25.h      }  64    
+        {AX25.C      }  89    92    
+        {AX25DUMP.C  }  183   
+     Upcall [unknown]     
+        {packmon.h   }  70    
+        {PACKMON.C   }  79    80    
+     VERSION [define]     
+        {packmon.h   }  16    
+        {PACKMON.C   }  106   
+        {LOG.C       }  149   
+     WINDOW [extern]     
+        {config.h    }  19    20    21    
+        {CONFIG.C    }  18    19    20    
+        {HELP.C      }  23    
+     _ARP_H [define]     
+        {arp.h       }  3     
+     _AX25_H [define]     
+        {ax25.h      }  9     
+     _DOUBLE_LINE [unknown]     
+        {CONFIG.C    }  41    43    
+        {HELP.C      }  25    
+     _NO_BORDER [unknown]     
+        {CONFIG.C    }  45    
+     __ARGS [char]     
+        {arp.h       }  48    49    107   109   110   111   112   113   114   
+                        115   118   
+     _window_att [unknown]     
+        {CONFIG.C    }  41    43    45    
+        {HELP.C      }  25    
+     alias [char]     
+        {netrom.h    }  14    
+     arg_tabel [unknown]     
+        {PACKMON.C   }  57    104   107   
+     arguments [unknown]     
+        {MISC.C      }  51    64    65    66    
+     arp->hardware [struct]     
+        {ARPDUMP.C   }  92    
+     arp->hwalen [struct]     
+        {ARPDUMP.C   }  94    97    99    
+     arp->opcode [struct]     
+        {ARPDUMP.C   }  96    
+     arp->pralen [struct]     
+        {ARPDUMP.C   }  95    
+     arp->protocol [struct]     
+        {ARPDUMP.C   }  93    
+     arp->shwaddr [struct]     
+        {ARPDUMP.C   }  97    
+     arp->sprotaddr [struct]     
+        {ARPDUMP.C   }  98    
+     arp->thwaddr [struct]     
+        {ARPDUMP.C   }  99    
+     arp->tprotaddr [struct]     
+        {ARPDUMP.C   }  100   
+     arp.hardware [struct]     
+        {ARPDUMP.C   }  131   132   137   
+     arp.hwalen [struct]     
+        {ARPDUMP.C   }  143   144   
+     arp.opcode [struct]     
+        {ARPDUMP.C   }  158   172   
+     arp.pralen [struct]     
+        {ARPDUMP.C   }  153   
+     arp.protocol [struct]     
+        {ARPDUMP.C   }  149   153   
+     arp.sprotaddr [struct]     
+        {ARPDUMP.C   }  181   
+     arp.tprotaddr [struct]     
+        {ARPDUMP.C   }  190   
+     arp_add [arp_tab]     
+        {arp.h       }  107   
+     arp_drop [void]     
+        {arp.h       }  109   
+     arp_init [int]     
+        {arp.h       }  110   
+     arp_input [void]     
+        {arp.h       }  113   
+     arp_lookup [arp_tab]     
+        {arp.h       }  114   
+     arptype [int16]     
+        {arp.h       }  43    110   
+     badaddr [unsigned]     
+        {arp.h       }  90    
+     badlen [unsigned]     
+        {arp.h       }  89    
+     badtype [unsigned]     
+        {arp.h       }  88    
+     bdcst [char]     
+        {arp.h       }  46    111   
+     bp [mbuf]     
+        {arp.h       }  113   115   118   
+     buffer [MBUF]     
+        {PACKMON.C   }  39    
+        {AX25DUMP.C  }  28    282   283   
+     buffer.data [MBUF]     
+        {AX25DUMP.C  }  281   
+     buffer.len [MBUF]     
+        {AX25DUMP.C  }  280   
+     bytes [long]     
+        {log.h       }  21    
+        {heard.h     }  29    
+        {HEARD.C     }  91    213   
+     call [struct]     
+        {ax25.h      }  94    
+        {log.h       }  16    
+        {heard.h     }  24    
+        {HEARD.C     }  118   196   197   
+     cmdresp [unknown]     
+        {ax25.h      }  107   
+     cnt [int16]     
+        {buf.h       }  17    
+     com_base [unknown]     
+        {packmon.h   }  58    
+        {PACKMON.C   }  60    
+     com_irq [unknown]     
+        {packmon.h   }  57    
+        {PACKMON.C   }  59    
+     cont [unknown]     
+        {ax25.h      }  108   
+     count [long]     
+        {log.h       }  20    
+        {heard.h     }  28    
+        {HEARD.C     }  92    206   
+     crc_table [unknown]     
+        {CRC.C       }  41    
+     data [char]     
+        {ax25.h      }  90    111   
+        {buf.h       }  19    
+     databuf [unknown]     
+        {packmon.h   }  71    
+        {PACKMON.C   }  81    
+     dest [ax25_addr]     
+        {ax25.h      }  102   
+        {netrom.h    }  13    
+     digis [ax25_addr]     
+        {ax25.h      }  104   
+     dir [int]     
+        {log.h       }  25    
+     dlen [int]     
+        {ax25.h      }  110   
+     dptr [char]     
+        {buf.h       }  18    
+     f [FILE]     
+        {PACKMON.C   }  45    
+     flags [long]     
+        {log.h       }  22    
+        {heard.h     }  30    
+        {HEARD.C     }  93    214   217   228   240   244   248   252   256   
+                        261   
+     format [char]     
+        {arp.h       }  48    111   
+     fptr [FILE]     
+        {log.h       }  19    
+        {heard.h     }  26    
+        {HEARD.C     }  46    47    90    178   179   180   199   200   201   
+                        265   270   271   
+     gr_line [char]     
+        {config.h    }  17    
+        {CONFIG.C    }  16    37    38    
+        {HEARD.C     }  200   
+        {LOG.C       }  148   
+     hardware [int16]     
+        {arp.h       }  57    75    107   114   115   
+     heard [mheard]     
+        {HEARD.C     }  24    46    47    51    52    68    69    90    91    
+                        92    93    94    95    96    118   141   142   178   
+                        179   180   196   197   199   200   201   205   206   
+                        213   214   217   228   230   240   244   248   252   
+                        256   261   265   267   268   270   271   304   338   
+     hw_addr [char]     
+        {arp.h       }  80    107   
+     hwalen [int16]     
+        {arp.h       }  41    59    110   
+     hwtype [int]     
+        {arp.h       }  110   
+     i [int]     
+        {PACKMON.C   }  44    
+     id [unknown]     
+        {log.h       }  23    
+        {heard.h     }  31    
+        {HEARD.C     }  94    
+     iface [struct]     
+        {arp.h       }  81    
+     inreq [unsigned]     
+        {arp.h       }  91    
+     ip_addr [int32]     
+        {arp.h       }  74    
+     ipaddr [int32]     
+        {arp.h       }  107   114   
+     iptype [int16]     
+        {arp.h       }  42    110   
+     irq_mask [unknown]     
+        {packmon.h   }  64    
+     j [int]     
+        {PACKMON.C   }  44    
+     last [unknown]     
+        {heard.h     }  25    
+        {HEARD.C     }  141   142   205   
+     len [int]     
+        {ax25.h      }  89    
+        {buf.h       }  16    
+     list_end [STATION]     
+        {log.h       }  34    
+     list_start [STATION]     
+        {log.h       }  33    
+        {LOG.C       }  67    
+     logfile [FILE]     
+        {LOG.C       }  32    143   144   148   149   163   189   190   
+     logname [char]     
+        {LOG.C       }  33    144   
+     ndigis [int]     
+        {ax25.h      }  106   
+     neighbor [ax25_addr]     
+        {netrom.h    }  15    
+     netrom_fmt [char]     
+        {NETDUMP.C   }  22    54    
+     next [packet_log]     
+        {log.h       }  26    
+        {arp.h       }  70    
+     nheard [int]     
+        {HEARD.C     }  25    45    114   120   173   185   301   303   
+     oldest [unknown]     
+        {HEARD.C     }  138   141   142   
+     opcode [int16]     
+        {arp.h       }  61    
+     outfile [unknown]     
+        {LOG.C       }  184   185   
+     outreq [unsigned]     
+        {arp.h       }  93    
+     p [ax25_level1]     
+        {CRC.C       }  29    33    39    45    
+        {log.h       }  27    
+        {arp.h       }  109   
+     p1buffer [MBUF]     
+        {AX25.C      }  30    101   106   107   113   114   127   128   142   
+                        145   175   
+     p1buffer.cnt [MBUF]     
+        {AX25.C      }  156   
+     p1buffer.data [MBUF]     
+        {AX25.C      }  100   
+     p1buffer.len [MBUF]     
+        {AX25.C      }  99    100   
+     path [char]     
+        {log.h       }  24    
+        {heard.h     }  32    
+        {HEARD.C     }  96    230   338   
+     pending [mbuf]     
+        {arp.h       }  73    
+     pendtime [int16]     
+        {arp.h       }  45    111   
+     pid [unknown]     
+        {ax25.h      }  109   
+     ploc [unknown]     
+        {NETDUMP.C   }  185   
+     pralen [char]     
+        {arp.h       }  60    
+     prev [arp_tab]     
+        {arp.h       }  71    
+     prev_timer_count [int]     
+        {PACKMON.C   }  47    
+     protocol [int16]     
+        {arp.h       }  58    
+     pub [char]     
+        {arp.h       }  79    108   
+     q [unknown]     
+        {CRC.C       }  30    43    48    
+     quality [unknown]     
+        {netrom.h    }  16    
+     rarp_input [void]     
+        {arp.h       }  118   
+     rarptype [int16]     
+        {arp.h       }  44    
+     recv [unsigned]     
+        {arp.h       }  87    
+     repeated [char]     
+        {ax25.h      }  105   
+     replies [unsigned]     
+        {arp.h       }  92    
+     res_arp [char]     
+        {arp.h       }  115   
+     s [unknown]     
+        {HEARD.C     }  292   305   318   320   322   324   326   328   330   
+                        332   334   337   
+     s_nr [unknown]     
+        {log.h       }  18    
+        {heard.h     }  27    
+        {HEARD.C     }  95    165   266   267   268   
+     scan [int]     
+        {arp.h       }  49    112   
+     shwaddr [char]     
+        {arp.h       }  62    
+     source [ax25_addr]     
+        {ax25.h      }  103   
+     sprotaddr [int32]     
+        {arp.h       }  63    
+     ssid [unknown]     
+        {ax25.h      }  95    
+        {AX25.C      }  129   
+     state [char]     
+        {arp.h       }  76    
+     t [unknown]     
+        {CRC.C       }  29    39    41    
+     t1 [unknown]     
+        {AX25.C      }  86    107   108   120   
+     t2 [unknown]     
+        {AX25.C      }  86    114   115   120   126   128   129   130   
+     target [int32]     
+        {arp.h       }  115   
+     thwaddr [char]     
+        {arp.h       }  64    
+     tm->tm_hour [struct]     
+        {STATUS.C    }  38    
+     tm->tm_mday [struct]     
+        {STATUS.C    }  38    
+     tm->tm_min [struct]     
+        {STATUS.C    }  39    
+     tm->tm_mon [struct]     
+        {STATUS.C    }  38    
+     tm->tm_sec [struct]     
+        {STATUS.C    }  39    
+     tm->tm_year [struct]     
+        {STATUS.C    }  38    
+     tprotaddr [int32]     
+        {arp.h       }  65    
+     w_heard [extern]     
+        {config.h    }  21    
+        {CONFIG.C    }  20    43    44    
+        {HEARD.C     }  295   298   299   337   338   
+     w_help [unknown]     
+        {HELP.C      }  23    25    26    28    30    
+     w_mon [extern]     
+        {config.h    }  19    
+        {CONFIG.C    }  18    41    42    
+        {AX25.C      }  52    58    59    95    135   159   
+     w_stat [extern]     
+        {config.h    }  20    
+        {CONFIG.C    }  19    45    
+        {STATUS.C    }  36    37    40    41    
+     write_ptr [unknown]     
+        {packmon.h   }  69    
+     x [char]     
+        {packmon.h   }  22    32    33    
+------------------------------------------------------------------------------
+
+                   EVALUATION COPY OF Xref. Please register.
+       Xref C cross ref utility v3.1 (c) 1991-1994 by David Archibald
+                      Printed on: Sat Jun 11 19:50:46 1994
+
+                        F U N C T I O N  S U M M A R Y
+==============================================================================
+    Module       :   Origin   :  Function
+------------------------------------------------------------------------------
+{packmon.h   }   :   [NONE]   :   AX25L1toL2()  [ax25_packet]
+{AX25.C      }   :    43      :   AX25Level2()  [void]
+{CRC.C       }   :    24      :   CRCcheck()  [int]
+{packmon.h   }   :   [NONE]   :   CmdResp()  [int]
+{AX25SUBR.C  }   :    160     :   CompAX25Addr()  [int]
+{packmon.h   }   :   [NONE]   :   ComputeSecondaryPar()  [void]
+{heard.h     }   :   [NONE]   :   DoHeard()  [void]
+{HELP.C      }   :    21      :   DoHelp()  [void]
+{AX25DUMP.C  }   :    246     :   DumpAX25()  [char]
+{AX25DUMP.C  }   :    69      :   DumpAX25hdr()  [char]
+{packmon.h   }   :   [NONE]   :   DumpLevel2()  [char]
+{STATUS.C    }   :    28      :   DumpStatus()  [void]
+{AX25DUMP.C  }   :    211     :   DumpText()  [char]
+{AX25SUBR.C  }   :    95      :   FrameType()  [int]
+{AX25SUBR.C  }   :    118     :   GetAX25Addr()  [char]
+{AX25SUBR.C  }   :    186     :   GetAX25Path()  [char]
+{HEARD.C     }   :    158     :   Heard()  [void]
+{HEARD.C     }   :    40      :   HeardExit()  [void]
+{HEARD.C     }   :    63      :   HeardInit()  [void]
+{packmon.h   }   :   [NONE]   :   Initialize_COM()  [void]
+{packmon.h   }   :   [NONE]   :   Initialize_Timer()  [void]
+{LOG.C       }   :    161     :   LogExit()  [void]
+{LOG.C       }   :    141     :   LogInit()  [void]
+{LOG.C       }   :    177     :   LogPacket()  [void]
+{NETDUMP.C   }   :    38      :   NRDumpBdcst()  [char]
+{NETDUMP.C   }   :    72      :   NetRomDump()  [char]
+{packmon.h   }   :   [NONE]   :   Restore_COM()  [void]
+{packmon.h   }   :   [NONE]   :   Restore_Timer()  [void]
+{packmon.h   }   :   [NONE]   :   ReversePath()  [void]
+{packmon.h   }   :   [NONE]   :   STREQ()  [define]
+{packmon.h   }   :   [NONE]   :   SendAX25()  [int]
+{packmon.h   }   :   [NONE]   :   SendBeacon()  [void]
+{packmon.h   }   :   [NONE]   :   SendWelcome()  [void]
+{packmon.h   }   :   [NONE]   :   SetAX25Addr()  [int]
+{packmon.h   }   :   [NONE]   :   SetAX25Path()  [int]
+{packmon.h   }   :   [NONE]   :   ShowLevel2()  [void]
+{packmon.h   }   :   [NONE]   :   StartBeacon()  [void]
+{LOG.C       }   :    86      :   add_station()  [STATION]
+{ARPDUMP.C   }   :    113     :   arp_dump()  [char]
+{AX25.C      }   :    82      :   ax25rec()  [ax25_packet]
+{BUF.C       }   :    95      :   buf2data()  [void]
+{CONFIG.C    }   :    34      :   configure()  [void]
+{packmon.h   }   :   [NONE]   :   convert()  [int]
+{MISC.C      }   :    105     :   ctoh()  [void]
+{MISC.C      }   :    49      :   debug()  [void]
+{packmon.h   }   :   [NONE]   :   dispatch()  [int]
+{AX25DUMP.C  }   :    39      :   dump_digis()  [char]
+{MISC.C      }   :    121     :   dump_hex()  [void]
+{AX25SUBR.C  }   :    71      :   eol_in()  [void]
+{packmon.h   }   :   [NONE]   :   eol_out()  [void]
+{packmon.h   }   :   [NONE]   :   extract()  [char]
+{HEARD.C     }   :    110     :   find_heard()  [int]
+{HEARD.C     }   :    134     :   find_oldest()  [int]
+{LOG.C       }   :    63      :   find_station()  [STATION]
+{PACKMON.C   }   :   [NONE]   :   getargs()  [int]
+{KEY.C       }   :    18      :   handle_key()  [int]
+{packmon.h   }   :   [NONE]   :   hibyte()  [define]
+{packmon.h   }   :   [NONE]   :   hinibble()  [define]
+{packmon.h   }   :   [NONE]   :   hiword()  [define]
+{ARPDUMP.C   }   :    70      :   inet_ntoa()  [char]
+{HEARD.C     }   :    88      :   init_entry()  [void]
+{LOG.C       }   :    43      :   init_station()  [void]
+{AX25SUBR.C  }   :    50      :   is_ax25multi()  [int]
+{packmon.h   }   :   [NONE]   :   lobyte()  [define]
+{LOG.C       }   :    234     :   log_bindata()  [FILE]
+{packmon.h   }   :   [NONE]   :   lonibble()  [define]
+{packmon.h   }   :   [NONE]   :   loword()  [define]
+{PACKMON.C   }   :    99      :   main()  [int]
+{PACKMON.C   }   :    72      :   mainloop()  [void]
+{ARPDUMP.C   }   :    90      :   ntoharp()  [int]
+{PACKMON.C   }   :   [NONE]   :   pr_usage()  [int]
+{BUF.C       }   :    56      :   pull16()  [int16]
+{BUF.C       }   :    34      :   pull32()  [int32]
+{BUF.C       }   :    75      :   pull8()  [int8]
+{packmon.h   }   :   [NONE]   :   reset_variables()  [void]
+{BUF.C       }   :    20      :   setbufptr()  [void]
+{MISC.C      }   :    87      :   smsg()  [char]
+{packmon.h   }   :   [NONE]   :   sob()  [char]
+{MISC.C      }   :    29      :   timestr()  [char]
+{packmon.h   }   :   [NONE]   :   trim()  [void]
+{packmon.h   }   :   [NONE]   :   uchar()  [define]
+{KEY.C       }   :   [NONE]   :   waitkey()  [int]
+{HEARD.C     }   :   [NONE]   :   wn_clear()  [int]
+{HELP.C      }   :   [NONE]   :   wn_close()  [int]
+{PACKMON.C   }   :   [NONE]   :   wn_exit()  [int]
+{PACKMON.C   }   :   [NONE]   :   wn_init()  [int]
+{STATUS.C    }   :   [NONE]   :   wn_locate()  [int]
+{CONFIG.C    }   :   [NONE]   :   wn_open()  [int]
+{AX25.C      }   :   [NONE]   :   wn_printf()  [int]
+{CONFIG.C    }   :   [NONE]   :   wn_title()  [int]
+------------------------------------------------------------------------------
+
+                   EVALUATION COPY OF Xref. Please register.
+       Xref C cross ref utility v3.1 (c) 1991-1994 by David Archibald
+                      Printed on: Sat Jun 11 19:50:46 1994
+
+                               F U N C T I O N S
+==============================================================================
+AX25Level2()  [void] : {AX25.C} : 43
+==============================================================================
+   USERS:
+        {ax25.h      }  23    
+        {PACKMON.C   }  81    
+------------------------------------------------------------------------------
+   CALLS:
+   {AX25.C      }             ax25rec()   {AX25.C      }            CRCcheck()
+   {AX25.C      }           wn_printf()   {AX25.C      }            DumpAX25()
+   {AX25.C      }           LogPacket()   {AX25.C      }               Heard()
+   {AX25.C      }             DoHeard()   {AX25.C      }          DumpStatus()
+------------------------------------------------------------------------------
+   INPUT PARAMETERS:
+     p [ax25_level1]
+------------------------------------------------------------------------------
+   LOCAL VARIABLES:
+     p [ax25_level1]
+          43    47    50    53    
+     p2 [ax25_packet]
+          45    47    52    54    58    67    68    
+------------------------------------------------------------------------------
+   GLOBAL VARIABLES:
+     DUMP_HEADER [define]
+          52    58    
+     DUMP_INFO [define]
+          52    58    
+     RXCRCErr [long]
+          57    
+     RXCount [long]
+          51    
+     w_mon [extern]
+          52    58    59    
+==============================================================================
+CRCcheck()  [int] : {CRC.C} : 24
+==============================================================================
+   USERS:
+        {crc.h       }  9     
+        {AX25.C      }  50    
+------------------------------------------------------------------------------
+   CALLS:  [NONE]
+------------------------------------------------------------------------------
+   INPUT PARAMETERS:
+     packet [ax25_level1]
+------------------------------------------------------------------------------
+   LOCAL VARIABLES:
+     crc [ax25_level1]
+          26    35    39    40    41    43    45    48    
+     i [int]
+          28    38    
+     len [int]
+          27    34    38    
+     packet [ax25_level1]
+          24    
+     packet->data [ax25_level1]
+          33    
+     packet->len [ax25_level1]
+          34    
+------------------------------------------------------------------------------
+   GLOBAL VARIABLES:
+     crc_table [unknown]
+          41    
+     p [unknown]
+          29    33    39    45    
+     q [unknown]
+          30    43    48    
+     t [unknown]
+          29    39    41    
+==============================================================================
+CompAX25Addr()  [int] : {AX25SUBR.C} : 160
+==============================================================================
+   USERS:
+        {packmon.h   }  99    
+        {HEARD.C     }  118   
+        {LOG.C       }  69    
+------------------------------------------------------------------------------
+   CALLS:  [NONE]
+------------------------------------------------------------------------------
+   INPUT PARAMETERS:
+     a1 [ax25_addr]
+     a2 [ax25_addr]
+------------------------------------------------------------------------------
+   LOCAL VARIABLES:
+     a1 [ax25_addr]
+          160   
+     a1->call [ax25_addr]
+          163   
+     a1->ssid [ax25_addr]
+          167   
+     a2 [ax25_addr]
+          160   
+     a2->call [ax25_addr]
+          163   
+     a2->ssid [ax25_addr]
+          167   
+------------------------------------------------------------------------------
+   GLOBAL VARIABLES:
+     TRUE [define]
+          164   
+==============================================================================
+DoHelp()  [void] : {HELP.C} : 21
+==============================================================================
+   USERS:
+        {packmon.h   }  121   
+        {KEY.C       }  27    
+------------------------------------------------------------------------------
+   CALLS:
+   {HELP.C      }             wn_open()   {HELP.C      }            wn_title()
+   {HELP.C      }           wn_printf()   {HELP.C      }            wn_close()
+------------------------------------------------------------------------------
+   INPUT PARAMETERS:
+     [NONE]
+------------------------------------------------------------------------------
+   LOCAL VARIABLES:
+     [NONE]
+------------------------------------------------------------------------------
+   GLOBAL VARIABLES:
+     MAXXSIZE [unknown]
+          25    
+     MAXYSIZE [unknown]
+          25    
+     WINDOW [extern]
+          23    
+     _DOUBLE_LINE [unknown]
+          25    
+     _window_att [unknown]
+          25    
+     w_help [unknown]
+          23    25    26    28    30    
+==============================================================================
+DumpAX25()  [char] : {AX25DUMP.C} : 246
+==============================================================================
+   USERS:
+        {ax25.h      }  28    
+        {AX25.C      }  52    58    
+        {HEARD.C     }  271   
+        {LOG.C       }  190   256   
+------------------------------------------------------------------------------
+   CALLS:
+   {AX25DUMP.C  }             timestr()   {AX25DUMP.C  }         DumpAX25hdr()
+   {AX25DUMP.C  }          NetRomDump()   {AX25DUMP.C  }            DumpText()
+   {AX25DUMP.C  }           setbufptr()   {AX25DUMP.C  }            arp_dump()
+   {AX25DUMP.C  }              eol_in()
+------------------------------------------------------------------------------
+   INPUT PARAMETERS:
+     flags [ax25_packet]
+     p [ax25_packet]
+------------------------------------------------------------------------------
+   LOCAL VARIABLES:
+     curtime [long]
+          250   256   257   
+     dtext [char]
+          248   252   258   260   262   264   274   277   283   287   293   
+     flags [ax25_packet]
+          246   254   270   
+     p [ax25_packet]
+          246   260   
+     p->data [ax25_packet]
+          274   277   281   286   287   
+     p->dlen [ax25_packet]
+          261   271   274   277   280   281   286   
+     p->pid [ax25_packet]
+          272   
+     t [char]
+          249   257   258   
+------------------------------------------------------------------------------
+   GLOBAL VARIABLES:
+     DUMP_HEADER [define]
+          254   283   
+     DUMP_INFO [define]
+          270   283   
+     EOL_CR [define]
+          286   
+     PID_ARP [define]
+          279   
+     PID_NETROM [define]
+          273   
+     PID_TEXT [define]
+          276   
+     buffer [MBUF]
+          282   283   
+     buffer.data [MBUF]
+          281   
+     buffer.len [MBUF]
+          280   
+==============================================================================
+DumpAX25hdr()  [char] : {AX25DUMP.C} : 69
+==============================================================================
+   USERS:
+        {ax25.h      }  27    
+        {AX25DUMP.C  }  260   
+------------------------------------------------------------------------------
+   CALLS:
+   {AX25DUMP.C  }         GetAX25Addr()   {AX25DUMP.C  }           FrameType()
+------------------------------------------------------------------------------
+   INPUT PARAMETERS:
+     p [ax25_packet]
+------------------------------------------------------------------------------
+   LOCAL VARIABLES:
+     dtext [char]
+          75    77    82    83    84    90    92    94    96    98    104   
+          107   108   109   110   111   112   113   114   115   116   126   
+          130   134   138   142   146   150   154   158   162   166   171   
+          181   182   183   192   196   198   200   
+     i [int]
+          71    91    92    93    95    
+     p [ax25_packet]
+          69    
+     p->cmdresp [ax25_packet]
+          180   
+     p->cont [ax25_packet]
+          106   179   191   195   
+     p->dest [ax25_packet]
+          84    
+     p->digis [ax25_packet]
+          92    
+     p->ndigis [ax25_packet]
+          89    91    95    
+     p->pid [ax25_packet]
+          123   170   
+     p->repeated [ax25_packet]
+          93    
+     p->source [ax25_packet]
+          82    
+     showinfo [int]
+          72    105   107   116   122   
+     t [char]
+          74    170   171   191   192   195   196   
+     type [int]
+          73    106   190   194   
+------------------------------------------------------------------------------
+   GLOBAL VARIABLES:
+     COMMAND [define]
+          181   
+     DISC [define]
+          112   
+     DM [define]
+          113   
+     FALSE [define]
+          105   
+     FRMR [define]
+          115   
+     I [define]
+          107   194   
+     PF [define]
+          179   
+     PID_APPLEARP [define]
+          145   
+     PID_APPLETALK [define]
+          141   
+     PID_ARP [define]
+          153   
+     PID_IP [define]
+          149   
+     PID_LQ [define]
+          137   
+     PID_NETROM [define]
+          161   
+     PID_NO_L3 [define]
+          165   
+     PID_RARP [define]
+          157   
+     PID_SEGMENT [define]
+          129   
+     PID_TEXNET [define]
+          133   
+     PID_X25 [define]
+          125   
+     REJ [define]
+          110   
+     RESPONSE [define]
+          182   
+     RNR [define]
+          109   
+     RR [define]
+          108   
+     SABM [define]
+          111   
+     TRUE [define]
+          107   116   
+     U [define]
+          190   
+     UA [define]
+          114   
+     UI [define]
+          116   
+     UNKNOWN [define]
+          183   
+==============================================================================
+DumpStatus()  [void] : {STATUS.C} : 28
+==============================================================================
+   USERS:
+        {status.h    }  11    
+        {PACKMON.C   }  84    
+        {AX25.C      }  64    
+        {KEY.C       }  26    
+------------------------------------------------------------------------------
+   CALLS:
+   {STATUS.C    }           wn_locate()   {STATUS.C    }           wn_printf()
+------------------------------------------------------------------------------
+   INPUT PARAMETERS:
+     [NONE]
+------------------------------------------------------------------------------
+   LOCAL VARIABLES:
+     t [long]
+          30    33    34    
+------------------------------------------------------------------------------
+   GLOBAL VARIABLES:
+     RXCRCErr [long]
+          41    
+     RXCount [long]
+          40    
+     tm->tm_hour [struct]
+          38    
+     tm->tm_mday [struct]
+          38    
+     tm->tm_min [struct]
+          39    
+     tm->tm_mon [struct]
+          38    
+     tm->tm_sec [struct]
+          39    
+     tm->tm_year [struct]
+          38    
+     w_stat [extern]
+          36    37    40    41    
+==============================================================================
+DumpText()  [char] : {AX25DUMP.C} : 211
+==============================================================================
+   USERS:
+        {AX25DUMP.C  }  277   
+------------------------------------------------------------------------------
+   CALLS:  [NONE]
+------------------------------------------------------------------------------
+   INPUT PARAMETERS:
+     d [unknown]
+     len [int]
+------------------------------------------------------------------------------
+   LOCAL VARIABLES:
+     d [unknown]
+          211   223   224   226   228   
+     dtext [char]
+          213   217   224   229   233   234   
+     i [int]
+          214   218   224   229   233   
+     j [int]
+          214   219   222   227   
+     len [int]
+          211   219   
+==============================================================================
+FrameType()  [int] : {AX25SUBR.C} : 95
+==============================================================================
+   USERS:
+        {packmon.h   }  100   
+        {AX25.C      }  143   
+        {HEARD.C     }  209   
+        {AX25DUMP.C  }  106   
+------------------------------------------------------------------------------
+   CALLS:  [NONE]
+------------------------------------------------------------------------------
+   INPUT PARAMETERS:
+     c [unknown]
+------------------------------------------------------------------------------
+   LOCAL VARIABLES:
+     c [unknown]
+          95    98    101   102   105   
+------------------------------------------------------------------------------
+   GLOBAL VARIABLES:
+     I [define]
+          99    
+     PF [define]
+          102   
+==============================================================================
+GetAX25Addr()  [char] : {AX25SUBR.C} : 118
+==============================================================================
+   USERS:
+        {packmon.h   }  98    
+        {NETDUMP.C   }  49    55    126   128   143   147   
+        {HEARD.C     }  197   243   247   251   255   269   270   306   
+        {AX25DUMP.C  }  49    82    84    92    
+        {AX25SUBR.C  }  193   198   202   
+------------------------------------------------------------------------------
+   CALLS:  [NONE]
+------------------------------------------------------------------------------
+   INPUT PARAMETERS:
+     a [ax25_addr]
+------------------------------------------------------------------------------
+   LOCAL VARIABLES:
+     a [ax25_addr]
+          118   
+     a->call [ax25_addr]
+          130   
+     a->ssid [ax25_addr]
+          140   
+     c [char]
+          122   130   131   134   
+     i [int]
+          123   129   130   140   141   142   
+     p [char]
+          121   128   134   142   144   
+     s [char]
+          120   128   149   
+------------------------------------------------------------------------------
+   GLOBAL VARIABLES:
+     MAXCLEN [define]
+          120   129   
+==============================================================================
+GetAX25Path()  [char] : {AX25SUBR.C} : 186
+==============================================================================
+   USERS:
+        {packmon.h   }  103   
+------------------------------------------------------------------------------
+   CALLS:
+   {AX25SUBR.C  }         GetAX25Addr()
+------------------------------------------------------------------------------
+   INPUT PARAMETERS:
+     p [ax25_packet]
+------------------------------------------------------------------------------
+   LOCAL VARIABLES:
+     ad [ax25_addr]
+          190   199   202   
+     i [int]
+          189   196   200   203   
+     p [ax25_packet]
+          186   
+     p->dest [ax25_packet]
+          193   
+     p->digis [ax25_packet]
+          198   199   
+     p->ndigis [ax25_packet]
+          196   
+     s [char]
+          188   193   197   198   201   202   205   208   
+==============================================================================
+Heard()  [void] : {HEARD.C} : 158
+==============================================================================
+   USERS:
+        {heard.h     }  52    
+        {AX25.C      }  54    
+==============================================================================
+HeardExit()  [void] : {HEARD.C} : 40
+==============================================================================
+   USERS:
+        {heard.h     }  51    
+        {PACKMON.C   }  143   
+------------------------------------------------------------------------------
+   CALLS:  [NONE]
+------------------------------------------------------------------------------
+   INPUT PARAMETERS:
+     [NONE]
+------------------------------------------------------------------------------
+   LOCAL VARIABLES:
+     i [int]
+          42    45    46    47    
+------------------------------------------------------------------------------
+   GLOBAL VARIABLES:
+     fptr [FILE]
+          46    47    
+     heard [mheard]
+          46    47    51    52    
+     nheard [int]
+          45    
+==============================================================================
+HeardInit()  [void] : {HEARD.C} : 63
+==============================================================================
+   USERS:
+        {heard.h     }  50    
+        {PACKMON.C   }  132   
+------------------------------------------------------------------------------
+   CALLS:
+   {HEARD.C     }          init_entry()
+------------------------------------------------------------------------------
+   INPUT PARAMETERS:
+     [NONE]
+------------------------------------------------------------------------------
+   LOCAL VARIABLES:
+     i [int]
+          65    75    76    
+------------------------------------------------------------------------------
+   GLOBAL VARIABLES:
+     MAXHEARD [define]
+          68    75    
+     heard [mheard]
+          68    69    
+==============================================================================
+LogExit()  [void] : {LOG.C} : 161
+==============================================================================
+   USERS:
+        {log.h       }  41    
+        {PACKMON.C   }  144   
+------------------------------------------------------------------------------
+   CALLS:  [NONE]
+------------------------------------------------------------------------------
+   INPUT PARAMETERS:
+     [NONE]
+------------------------------------------------------------------------------
+   LOCAL VARIABLES:
+     [NONE]
+------------------------------------------------------------------------------
+   GLOBAL VARIABLES:
+     logfile [FILE]
+          163   
+==============================================================================
+LogInit()  [void] : {LOG.C} : 141
+==============================================================================
+   USERS:
+        {log.h       }  40    
+        {PACKMON.C   }  130   
+------------------------------------------------------------------------------
+   CALLS:  [NONE]
+------------------------------------------------------------------------------
+   INPUT PARAMETERS:
+     [NONE]
+------------------------------------------------------------------------------
+   LOCAL VARIABLES:
+     [NONE]
+------------------------------------------------------------------------------
+   GLOBAL VARIABLES:
+     VERSION [define]
+          149   
+     gr_line [char]
+          148   
+     logfile [FILE]
+          143   144   148   149   
+     logname [char]
+          144   
+==============================================================================
+LogPacket()  [void] : {LOG.C} : 177
+==============================================================================
+   USERS:
+        {log.h       }  42    
+        {AX25.C      }  53    
+------------------------------------------------------------------------------
+   CALLS:
+   {LOG.C       }             ax25rec()   {LOG.C       }            DumpAX25()
+------------------------------------------------------------------------------
+   INPUT PARAMETERS:
+     p1 [ax25_level1]
+------------------------------------------------------------------------------
+   LOCAL VARIABLES:
+     i [int]
+          182   183   184   
+     p1 [ax25_level1]
+          177   188   
+     p1.data [ax25_level1]
+          184   
+     p1.len [ax25_level1]
+          183   
+     p2 [ax25_packet]
+          179   188   190   191   
+------------------------------------------------------------------------------
+   GLOBAL VARIABLES:
+     DUMP_HEADER [define]
+          190   
+     DUMP_INFO [define]
+          190   
+     HEX [unknown]
+          181   
+     logfile [FILE]
+          189   190   
+     outfile [unknown]
+          184   185   
+==============================================================================
+NRDumpBdcst()  [char] : {NETDUMP.C} : 38
+==============================================================================
+   USERS:
+        {NETDUMP.C   }  18    102   
+------------------------------------------------------------------------------
+   CALLS:
+   {NETDUMP.C   }         GetAX25Addr()
+------------------------------------------------------------------------------
+   INPUT PARAMETERS:
+     p [nr_broadcast]
+------------------------------------------------------------------------------
+   LOCAL VARIABLES:
+     alias [char]
+          41    47    48    56    
+     best_neighbor [char]
+          42    49    57    
+     p [nr_broadcast]
+          38    
+     p->alias [nr_broadcast]
+          47    
+     p->dest [nr_broadcast]
+          55    
+     p->neighbor [nr_broadcast]
+          49    
+     p->quality [nr_broadcast]
+          58    
+     t [char]
+          40    54    60    
+------------------------------------------------------------------------------
+   GLOBAL VARIABLES:
+     netrom_fmt [char]
+          54    
+==============================================================================
+NetRomDump()  [char] : {NETDUMP.C} : 72
+==============================================================================
+   USERS:
+        {netrom.h    }  25    
+        {AX25DUMP.C  }  274   
+------------------------------------------------------------------------------
+   CALLS:
+   {NETDUMP.C   }         NRDumpBdcst()   {NETDUMP.C   }            dump_hex()
+   {NETDUMP.C   }         GetAX25Addr()   {NETDUMP.C   }              eol_in()
+------------------------------------------------------------------------------
+   INPUT PARAMETERS:
+     d [unknown]
+     len [int]
+------------------------------------------------------------------------------
+   LOCAL VARIABLES:
+     d [unknown]
+          72    89    90    93    94    102   103   107   110   112   126   
+          128   129   130   137   139   143   145   147   151   154   157   
+          161   166   169   178   182   184   185   186   
+     data [int]
+          76    82    140   162   177   
+     dtext [char]
+          77    83    84    92    97    98    102   108   111   119   126   
+          127   128   131   172   180   190   
+     i [int]
+          75    99    
+     len [int]
+          72    79    91    95    100   104   112   132   179   182   183   
+     t [char]
+          74    93    96    97    110   111   130   131   139   144   150   
+          154   157   160   165   169   172   
+     t1 [char]
+          74    143   146   
+------------------------------------------------------------------------------
+   GLOBAL VARIABLES:
+     DONT_SKIP_THIS [unknown]
+          181   
+     EOL_CR [define]
+          182   
+     FALSE [define]
+          82    
+     NR3NODESIG [define]
+          89    
+     NR3POLLSIG [define]
+          107   
+     TRUE [define]
+          140   162   
+     ploc [unknown]
+          185   
+==============================================================================
+add_station()  [STATION] : {LOG.C} : 86
+==============================================================================
+   USERS:  [NONE]
+------------------------------------------------------------------------------
+   CALLS:  [NONE]
+------------------------------------------------------------------------------
+   INPUT PARAMETERS:
+     info [STATION]
+     last [STATION]
+     start [STATION]
+------------------------------------------------------------------------------
+   LOCAL VARIABLES:
+     done [int]
+          89    93    104   124   
+     info [STATION]
+          86    100   101   114   120   125   127   
+     info->call [STATION]
+          105   
+     info->next [STATION]
+          99    115   119   126   
+     last [STATION]
+          86    100   127   
+     last->next [STATION]
+          125   
+     old [STATION]
+          88    92    106   113   
+     old->next [STATION]
+          114   
+     start [STATION]
+          86    91    95    104   106   107   115   119   
+     start->call [STATION]
+          105   
+     start->next [STATION]
+          107   
+     top [STATION]
+          88    91    116   128   
+==============================================================================
+arp_dump()  [char] : {ARPDUMP.C} : 113
+==============================================================================
+   USERS:
+        {arp.h       }  102   
+        {AX25DUMP.C  }  283   
+------------------------------------------------------------------------------
+   CALLS:
+   {ARPDUMP.C   }             ntoharp()   {ARPDUMP.C   }                smsg()
+   {ARPDUMP.C   }           inet_ntoa()
+------------------------------------------------------------------------------
+   INPUT PARAMETERS:
+     bpp [MBUF]
+     flags [MBUF]
+------------------------------------------------------------------------------
+   LOCAL VARIABLES:
+     at [arp_type]
+          117   132   134   143   149   
+     at->hwalen [arp_type]
+          143   
+     at->iptype [arp_type]
+          149   
+     bpp [MBUF]
+          113   125   
+     flags [MBUF]
+          113   
+     is_ip [int]
+          118   151   180   189   
+     s [char]
+          115   122   126   127   138   145   150   154   160   163   166   
+          169   173   176   179   182   185   188   191   194   197   
+     t [char]
+          119   137   138   144   145   153   154   172   173   181   182   
+          190   191   
+------------------------------------------------------------------------------
+   GLOBAL VARIABLES:
+     ARP_REPLY [define]
+          162   
+     ARP_REQUEST [define]
+          159   
+     Arp_type [arp_type]
+          132   
+     Arptypes [char]
+          137   
+     NHWTYPES [define]
+          131   137   
+     NULLATYPE [define]
+          134   143   149   
+     REVARP_REPLY [define]
+          168   
+     REVARP_REQUEST [define]
+          165   
+     arp.hardware [struct]
+          131   132   137   
+     arp.hwalen [struct]
+          143   144   
+     arp.opcode [struct]
+          158   172   
+     arp.pralen [struct]
+          153   
+     arp.protocol [struct]
+          149   153   
+     arp.sprotaddr [struct]
+          181   
+     arp.tprotaddr [struct]
+          190   
+==============================================================================
+ax25rec()  [ax25_packet] : {AX25.C} : 82
+==============================================================================
+   USERS:
+        {ax25.h      }  24    
+        {AX25.C      }  47    
+        {LOG.C       }  188   
+------------------------------------------------------------------------------
+   CALLS:
+   {AX25.C      }           wn_printf()   {AX25.C      }           setbufptr()
+   {AX25.C      }            buf2data()   {AX25.C      }               pull8()
+   {AX25.C      }           FrameType()
+------------------------------------------------------------------------------
+   INPUT PARAMETERS:
+     p1 [ax25_level1]
+------------------------------------------------------------------------------
+   LOCAL VARIABLES:
+     cr [int]
+          87    89    90    91    92    120   
+     p [ax25_packet]
+          85    166   167   171   178   
+     p->data [ax25_packet]
+          175   
+     p1 [ax25_level1]
+          82    
+     p1->data [ax25_level1]
+          100   
+     p1->len [ax25_level1]
+          94    95    99    
+     p2 [ax25_packet]
+          84    171   
+     p2.cmdresp [ax25_packet]
+          120   
+     p2.cont [ax25_packet]
+          142   143   
+     p2.dest [ax25_packet]
+          106   
+     p2.dest.ssid [ax25_packet]
+          108   
+     p2.digis [ax25_packet]
+          127   129   
+     p2.dlen [ax25_packet]
+          156   158   159   166   174   175   
+     p2.ndigis [ax25_packet]
+          125   126   127   129   130   134   
+     p2.pid [ax25_packet]
+          145   
+     p2.repeated [ax25_packet]
+          130   
+     p2.source [ax25_packet]
+          113   
+     p2.source.ssid [ax25_packet]
+          115   
+------------------------------------------------------------------------------
+   GLOBAL VARIABLES:
+     COMMAND [define]
+          91    
+     I [define]
+          144   
+     MAXCLEN [define]
+          106   113   127   
+     MAXDIGIS [define]
+          126   134   
+     REPEATED [define]
+          120   130   
+     RESPONSE [define]
+          90    
+     SSIDMASK [define]
+          108   115   129   
+     UI [define]
+          145   
+     UNKNOWN [define]
+          89    92    
+     p1buffer [MBUF]
+          101   106   107   113   114   127   128   142   145   175   
+     p1buffer.cnt [MBUF]
+          156   
+     p1buffer.data [MBUF]
+          100   
+     p1buffer.len [MBUF]
+          99    100   
+     ssid [unknown]
+          129   
+     t1 [unknown]
+          86    107   108   120   
+     t2 [unknown]
+          86    114   115   120   126   128   129   130   
+     w_mon [extern]
+          95    135   159   
+==============================================================================
+buf2data()  [void] : {BUF.C} : 95
+==============================================================================
+   USERS:
+        {buf.h       }  29    
+        {ARPDUMP.C   }  97    99    
+        {AX25.C      }  106   113   127   175   
+------------------------------------------------------------------------------
+   CALLS:  [NONE]
+------------------------------------------------------------------------------
+   INPUT PARAMETERS:
+     dest [char]
+     n [int16]
+     src [MBUF]
+------------------------------------------------------------------------------
+   LOCAL VARIABLES:
+     dest [char]
+          95    97    
+     n [int16]
+          95    97    98    99    
+     src [MBUF]
+          95    
+     src->cnt [MBUF]
+          99    
+     src->dptr [MBUF]
+          97    98    
+==============================================================================
+configure()  [void] : {CONFIG.C} : 34
+==============================================================================
+   USERS:
+        {config.h    }  13    
+        {PACKMON.C   }  113   
+        {CONFIG.C    }  24    
+------------------------------------------------------------------------------
+   CALLS:
+   {CONFIG.C    }             wn_open()   {CONFIG.C    }            wn_title()
+------------------------------------------------------------------------------
+   INPUT PARAMETERS:
+     [NONE]
+------------------------------------------------------------------------------
+   LOCAL VARIABLES:
+     [NONE]
+------------------------------------------------------------------------------
+   GLOBAL VARIABLES:
+     MAXXSIZE [unknown]
+          41    43    45    
+     MAXYSIZE [unknown]
+          41    43    
+     _DOUBLE_LINE [unknown]
+          41    43    
+     _NO_BORDER [unknown]
+          45    
+     _window_att [unknown]
+          41    43    45    
+     gr_line [char]
+          37    38    
+     w_heard [extern]
+          43    44    
+     w_mon [extern]
+          41    42    
+     w_stat [extern]
+          45    
+==============================================================================
+ctoh()  [void] : {MISC.C} : 105
+==============================================================================
+   USERS:
+        {MISC.C      }  142   
+------------------------------------------------------------------------------
+   CALLS:  [NONE]
+------------------------------------------------------------------------------
+   INPUT PARAMETERS:
+     c [char]
+     s [char]
+------------------------------------------------------------------------------
+   LOCAL VARIABLES:
+     c [char]
+          105   109   110   
+     convert [char]
+          107   109   110   
+     s [char]
+          105   109   110   
+==============================================================================
+debug()  [void] : {MISC.C} : 49
+==============================================================================
+   USERS:
+        {packmon.h   }  90    
+        {misc.h      }  12    
+        {MISC.C      }  129   150   
+------------------------------------------------------------------------------
+   CALLS:  [NONE]
+------------------------------------------------------------------------------
+   INPUT PARAMETERS:
+     format [char]
+------------------------------------------------------------------------------
+   LOCAL VARIABLES:
+     f [FILE]
+          53    57    59    69    71    74    75    
+     format [char]
+          49    64    65    
+     i [int]
+          54    67    68    69    70    72    
+     s [char]
+          52    65    68    69    70    
+------------------------------------------------------------------------------
+   GLOBAL VARIABLES:
+     CR [define]
+          70    71    74    
+     LF [define]
+          70    75    
+     arguments [unknown]
+          51    64    65    66    
+==============================================================================
+dump_digis()  [char] : {AX25DUMP.C} : 39
+==============================================================================
+   USERS:
+        {ax25.h      }  29    
+        {HEARD.C     }  230   
+------------------------------------------------------------------------------
+   CALLS:
+   {AX25DUMP.C  }         GetAX25Addr()
+------------------------------------------------------------------------------
+   INPUT PARAMETERS:
+     p [ax25_packet]
+------------------------------------------------------------------------------
+   LOCAL VARIABLES:
+     dtext [char]
+          41    44    47    49    51    53    55    57    
+     i [int]
+          42    48    49    50    52    
+     p [ax25_packet]
+          39    
+     p->digis [ax25_packet]
+          49    
+     p->ndigis [ax25_packet]
+          46    48    52    
+     p->repeated [ax25_packet]
+          50    
+==============================================================================
+dump_hex()  [void] : {MISC.C} : 121
+==============================================================================
+   USERS:
+        {misc.h      }  14    
+        {NETDUMP.C   }  112   
+------------------------------------------------------------------------------
+   CALLS:
+   {MISC.C      }               debug()   {MISC.C      }                ctoh()
+------------------------------------------------------------------------------
+   INPUT PARAMETERS:
+     d [char]
+     len [int]
+------------------------------------------------------------------------------
+   LOCAL VARIABLES:
+     c [char]
+          126   140   142   144   146   147   
+     cnt [int]
+          123   128   130   139   141   
+     d [char]
+          121   140   
+     hp [char]
+          125   132   142   143   
+     i [int]
+          123   139   
+     len [int]
+          121   128   
+     outbuf [char]
+          124   132   133   134   136   137   150   
+     rp [char]
+          125   134   147   
+     sc [char]
+          125   144   145   
+     sp [char]
+          125   133   145   
+==============================================================================
+eol_in()  [void] : {AX25SUBR.C} : 71
+==============================================================================
+   USERS:
+        {packmon.h   }  118   
+        {NETDUMP.C   }  182   
+        {AX25DUMP.C  }  286   
+------------------------------------------------------------------------------
+   CALLS:  [NONE]
+------------------------------------------------------------------------------
+   INPUT PARAMETERS:
+     conv [int]
+     l [int]
+     s [char]
+------------------------------------------------------------------------------
+   LOCAL VARIABLES:
+     conv [int]
+          71    73    
+     l [int]
+          71    75    
+     s [char]
+          71    76    77    78    
+------------------------------------------------------------------------------
+   GLOBAL VARIABLES:
+     EOL_CR [define]
+          74    
+     EOL_LF [define]
+          80    
+==============================================================================
+find_heard()  [int] : {HEARD.C} : 110
+==============================================================================
+   USERS:
+        {HEARD.C     }  29    170   
+------------------------------------------------------------------------------
+   CALLS:
+   {HEARD.C     }        CompAX25Addr()
+------------------------------------------------------------------------------
+   INPUT PARAMETERS:
+     source [ax25_addr]
+------------------------------------------------------------------------------
+   LOCAL VARIABLES:
+     i [int]
+          112   117   118   119   120   
+     source [ax25_addr]
+          110   118   
+------------------------------------------------------------------------------
+   GLOBAL VARIABLES:
+     HEARD_LIST_EMPTY [define]
+          115   
+     HEARD_LIST_FULL [define]
+          123   
+     HEARD_NOT_FOUND [define]
+          121   
+     MAXHEARD [define]
+          117   
+     call [struct]
+          118   
+     heard [mheard]
+          118   
+     nheard [int]
+          114   120   
+==============================================================================
+find_oldest()  [int] : {HEARD.C} : 134
+==============================================================================
+   USERS:
+        {HEARD.C     }  30    177   
+------------------------------------------------------------------------------
+   CALLS:  [NONE]
+------------------------------------------------------------------------------
+   INPUT PARAMETERS:
+     [NONE]
+------------------------------------------------------------------------------
+   LOCAL VARIABLES:
+     i [int]
+          136   140   141   142   143   
+     noldest [int]
+          137   143   146   
+------------------------------------------------------------------------------
+   GLOBAL VARIABLES:
+     MAXHEARD [define]
+          140   
+     heard [mheard]
+          141   142   
+     last [unknown]
+          141   142   
+     oldest [unknown]
+          138   141   142   
+==============================================================================
+find_station()  [STATION] : {LOG.C} : 63
+==============================================================================
+   USERS:  [NONE]
+------------------------------------------------------------------------------
+   CALLS:
+   {LOG.C       }        CompAX25Addr()
+------------------------------------------------------------------------------
+   INPUT PARAMETERS:
+     call [ax25_addr]
+------------------------------------------------------------------------------
+   LOCAL VARIABLES:
+     call [ax25_addr]
+          63    69    
+     t [STATION]
+          65    67    70    72    
+     t->call [STATION]
+          69    
+     t->next [STATION]
+          71    72    
+------------------------------------------------------------------------------
+   GLOBAL VARIABLES:
+     TRUE [define]
+          68    
+     list_start [STATION]
+          67    
+==============================================================================
+handle_key()  [int] : {KEY.C} : 18
+==============================================================================
+   USERS:
+        {PACKMON.C   }  52    85    
+------------------------------------------------------------------------------
+   CALLS:
+   {KEY.C       }             waitkey()   {KEY.C       }             DoHeard()
+   {KEY.C       }          DumpStatus()   {KEY.C       }              DoHelp()
+------------------------------------------------------------------------------
+   INPUT PARAMETERS:
+     [NONE]
+------------------------------------------------------------------------------
+   LOCAL VARIABLES:
+     c [int]
+          20    23    24    32    
+------------------------------------------------------------------------------
+   GLOBAL VARIABLES:
+     F1 [unknown]
+          27    
+==============================================================================
+inet_ntoa()  [char] : {ARPDUMP.C} : 70
+==============================================================================
+   USERS:
+        {arp.h       }  101   
+        {ARPDUMP.C   }  181   190   
+------------------------------------------------------------------------------
+   CALLS:
+   {ARPDUMP.C   }              hibyte()   {ARPDUMP.C   }              hiword()
+   {ARPDUMP.C   }              lobyte()   {ARPDUMP.C   }              loword()
+------------------------------------------------------------------------------
+   INPUT PARAMETERS:
+     a [int32]
+------------------------------------------------------------------------------
+   LOCAL VARIABLES:
+     a [int32]
+          70    75    76    77    78    
+     buf [char]
+          72    74    79    
+==============================================================================
+init_entry()  [void] : {HEARD.C} : 88
+==============================================================================
+   USERS:
+        {HEARD.C     }  28    76    195   
+------------------------------------------------------------------------------
+   CALLS:  [NONE]
+------------------------------------------------------------------------------
+   INPUT PARAMETERS:
+     i [int]
+------------------------------------------------------------------------------
+   LOCAL VARIABLES:
+     i [int]
+          88    90    91    92    93    94    95    96    
+------------------------------------------------------------------------------
+   GLOBAL VARIABLES:
+     bytes [long]
+          91    
+     count [long]
+          92    
+     flags [long]
+          93    
+     fptr [FILE]
+          90    
+     heard [mheard]
+          90    91    92    93    94    95    96    
+     id [unknown]
+          94    
+     path [char]
+          96    
+     s_nr [unknown]
+          95    
+==============================================================================
+init_station()  [void] : {LOG.C} : 43
+==============================================================================
+   USERS:  [NONE]
+------------------------------------------------------------------------------
+   CALLS:  [NONE]
+------------------------------------------------------------------------------
+   INPUT PARAMETERS:
+     station [STATION]
+------------------------------------------------------------------------------
+   LOCAL VARIABLES:
+     station [STATION]
+          43    
+     station->bytes [STATION]
+          46    
+     station->count [STATION]
+          47    
+     station->flags [STATION]
+          48    
+     station->fptr [STATION]
+          45    
+     station->id [STATION]
+          49    
+     station->path [STATION]
+          51    
+     station->s_nr [STATION]
+          50    
+==============================================================================
+is_ax25multi()  [int] : {AX25SUBR.C} : 50
+==============================================================================
+   USERS:
+        {ax25.h      }  115   
+------------------------------------------------------------------------------
+   CALLS:  [NONE]
+------------------------------------------------------------------------------
+   INPUT PARAMETERS:
+     addr [ax25_addr]
+------------------------------------------------------------------------------
+   LOCAL VARIABLES:
+     addr [ax25_addr]
+          50    55    
+     i [int]
+          52    54    55    56    
+------------------------------------------------------------------------------
+   GLOBAL VARIABLES:
+     Ax25multi [char]
+          55    
+     MAX_MULTI_ADDR [define]
+          54    
+     MA_NONE [define]
+          58    
+==============================================================================
+log_bindata()  [FILE] : {LOG.C} : 234
+==============================================================================
+   USERS:  [NONE]
+------------------------------------------------------------------------------
+   CALLS:
+   {LOG.C       }            DumpAX25()
+------------------------------------------------------------------------------
+   INPUT PARAMETERS:
+     file [FILE]
+     p [ax25_packet]
+------------------------------------------------------------------------------
+   LOCAL VARIABLES:
+     f [FILE]
+          236   243   250   256   257   
+     file [FILE]
+          234   242   250   
+     p [ax25_packet]
+          234   256   
+     s [char]
+          237   244   245   
+------------------------------------------------------------------------------
+   GLOBAL VARIABLES:
+     DUMP_INFO [define]
+          256   
+==============================================================================
+main()  [int] : {PACKMON.C} : 99
+==============================================================================
+   USERS:  [NONE]
+------------------------------------------------------------------------------
+   CALLS:
+   {PACKMON.C   }             getargs()   {PACKMON.C   }            pr_usage()
+   {PACKMON.C   }             wn_init()   {PACKMON.C   }           configure()
+   {PACKMON.C   }             LogInit()   {PACKMON.C   }      Initialize_COM()
+   {PACKMON.C   }           HeardInit()   {PACKMON.C   }             DoHeard()
+   {PACKMON.C   }            mainloop()   {PACKMON.C   }         Restore_COM()
+   {PACKMON.C   }           HeardExit()   {PACKMON.C   }             LogExit()
+   {PACKMON.C   }             wn_exit()
+------------------------------------------------------------------------------
+   INPUT PARAMETERS:
+     argc [int]
+     argv [char]
+------------------------------------------------------------------------------
+   LOCAL VARIABLES:
+     argc [int]
+          99    104   105   
+     argv [char]
+          99    104   
+------------------------------------------------------------------------------
+   GLOBAL VARIABLES:
+     TABSIZE [unknown]
+          104   107   
+     VERSION [define]
+          106   
+     arg_tabel [unknown]
+          104   107   
+==============================================================================
+mainloop()  [void] : {PACKMON.C} : 72
+==============================================================================
+   USERS:
+        {PACKMON.C   }  71    139   
+------------------------------------------------------------------------------
+   CALLS:
+   {PACKMON.C   }             timestr()   {PACKMON.C   }          AX25Level2()
+   {PACKMON.C   }          DumpStatus()   {PACKMON.C   }          handle_key()
+------------------------------------------------------------------------------
+   INPUT PARAMETERS:
+     [NONE]
+------------------------------------------------------------------------------
+   LOCAL VARIABLES:
+     c [int]
+          74    85    87    
+     last_time [char]
+          75    77    82    
+------------------------------------------------------------------------------
+   GLOBAL VARIABLES:
+     Upcall [unknown]
+          79    80    
+     databuf [unknown]
+          81    
+==============================================================================
+ntoharp()  [int] : {ARPDUMP.C} : 90
+==============================================================================
+   USERS:
+        {arp.h       }  98    
+        {ARPDUMP.C   }  125   
+------------------------------------------------------------------------------
+   CALLS:
+   {ARPDUMP.C   }              pull16()   {ARPDUMP.C   }               pull8()
+   {ARPDUMP.C   }            buf2data()   {ARPDUMP.C   }               uchar()
+   {ARPDUMP.C   }              pull32()
+------------------------------------------------------------------------------
+   INPUT PARAMETERS:
+     buf [MBUF]
+------------------------------------------------------------------------------
+   LOCAL VARIABLES:
+     buf [MBUF]
+          90    92    93    94    95    96    97    98    99    100   
+------------------------------------------------------------------------------
+   GLOBAL VARIABLES:
+     arp->hardware [struct]
+          92    
+     arp->hwalen [struct]
+          94    97    99    
+     arp->opcode [struct]
+          96    
+     arp->pralen [struct]
+          95    
+     arp->protocol [struct]
+          93    
+     arp->shwaddr [struct]
+          97    
+     arp->sprotaddr [struct]
+          98    
+     arp->thwaddr [struct]
+          99    
+     arp->tprotaddr [struct]
+          100   
+==============================================================================
+pull16()  [int16] : {BUF.C} : 56
+==============================================================================
+   USERS:
+        {buf.h       }  27    
+        {ARPDUMP.C   }  92    93    96    
+------------------------------------------------------------------------------
+   CALLS:  [NONE]
+------------------------------------------------------------------------------
+   INPUT PARAMETERS:
+     buf [MBUF]
+------------------------------------------------------------------------------
+   LOCAL VARIABLES:
+     buf [MBUF]
+          56    
+     buf->cnt [MBUF]
+          63    
+     buf->dptr [MBUF]
+          60    62    
+     data [int16]
+          58    60    61    62    64    
+==============================================================================
+pull32()  [int32] : {BUF.C} : 34
+==============================================================================
+   USERS:
+        {buf.h       }  26    
+        {ARPDUMP.C   }  98    100   
+------------------------------------------------------------------------------
+   CALLS:  [NONE]
+------------------------------------------------------------------------------
+   INPUT PARAMETERS:
+     buf [MBUF]
+------------------------------------------------------------------------------
+   LOCAL VARIABLES:
+     buf [MBUF]
+          34    
+     buf->cnt [MBUF]
+          45    
+     buf->dptr [MBUF]
+          38    40    42    44    
+     rval [int32]
+          36    38    39    40    41    42    43    44    46    
+==============================================================================
+pull8()  [int8] : {BUF.C} : 75
+==============================================================================
+   USERS:
+        {buf.h       }  28    
+        {ARPDUMP.C   }  94    95    
+        {AX25.C      }  107   114   128   142   145   
+------------------------------------------------------------------------------
+   CALLS:  [NONE]
+------------------------------------------------------------------------------
+   INPUT PARAMETERS:
+     buf [MBUF]
+------------------------------------------------------------------------------
+   LOCAL VARIABLES:
+     buf [MBUF]
+          75    
+     buf->cnt [MBUF]
+          81    
+     buf->dptr [MBUF]
+          79    80    
+     data [int8]
+          77    79    82    
+==============================================================================
+setbufptr()  [void] : {BUF.C} : 20
+==============================================================================
+   USERS:
+        {buf.h       }  25    
+        {AX25.C      }  101   
+        {AX25DUMP.C  }  282   
+------------------------------------------------------------------------------
+   CALLS:  [NONE]
+------------------------------------------------------------------------------
+   INPUT PARAMETERS:
+     buffer [MBUF]
+     n [long]
+------------------------------------------------------------------------------
+   LOCAL VARIABLES:
+     buffer [MBUF]
+          20    
+     buffer->cnt [MBUF]
+          23    
+     buffer->data [MBUF]
+          22    
+     buffer->dptr [MBUF]
+          22    
+     buffer->len [MBUF]
+          23    
+     n [long]
+          20    22    23    
+==============================================================================
+smsg()  [char] : {MISC.C} : 87
+==============================================================================
+   USERS:
+        {misc.h      }  13    
+        {ARPDUMP.C   }  137   
+------------------------------------------------------------------------------
+   CALLS:  [NONE]
+------------------------------------------------------------------------------
+   INPUT PARAMETERS:
+     msgs [char]
+     n [int]
+     nmsgs [int]
+------------------------------------------------------------------------------
+   LOCAL VARIABLES:
+     buf [char]
+          89    93    94    
+     msgs [char]
+          87    91    92    
+     n [int]
+          87    91    92    93    
+     nmsgs [int]
+          87    91    
+==============================================================================
+timestr()  [char] : {MISC.C} : 29
+==============================================================================
+   USERS:
+        {misc.h      }  11    
+        {PACKMON.C   }  77    82    
+        {HEARD.C     }  201   308   
+        {AX25DUMP.C  }  257   
+------------------------------------------------------------------------------
+   CALLS:  [NONE]
+------------------------------------------------------------------------------
+   INPUT PARAMETERS:
+     t [unknown]
+------------------------------------------------------------------------------
+   LOCAL VARIABLES:
+     s [char]
+          31    35    38    
+     t [unknown]
+          29    34    
+     timeptr [struct]
+          32    34    
+     timeptr->tm_hour [struct]
+          36    
+     timeptr->tm_min [struct]
+          36    
+     timeptr->tm_sec [struct]
+          36    
+==============================================================================
+
+                   EVALUATION COPY OF Xref. Please register.
+       Xref C cross ref utility v3.1 (c) 1991-1994 by David Archibald
+                      Printed on: Sat Jun 11 19:50:46 1994
+
+==============================================================================
+ Module     :  Function tree
+==============================================================================
+PACKMON.C   :main
+[unknown]   :|_getargs 
+            :| 
+[unknown]   :|_pr_usage 
+            :| 
+[unknown]   :|_wn_init 
+            :| 
+CONFIG.C    :|_configure 
+[unknown]   :| |_wn_open 
+            :| | 
+[unknown]   :| |_wn_title 
+            :|   
+LOG.C       :|_LogInit 
+            :| 
+[unknown]   :|_Initialize_COM 
+            :| 
+HEARD.C     :|_HeardInit 
+HEARD.C     :| |_init_entry 
+            :|   
+[unknown]   :|_DoHeard 
+            :| 
+PACKMON.C   :|_mainloop 
+MISC.C      :| |_timestr 
+            :| | 
+AX25.C      :| |_AX25Level2 
+AX25.C      :| | |_ax25rec 
+[unknown]   :| | | |_wn_printf 
+            :| | | | 
+BUF.C       :| | | |_setbufptr 
+            :| | | | 
+BUF.C       :| | | |_buf2data 
+            :| | | | 
+BUF.C       :| | | |_pull8 
+            :| | | | 
+AX25SUBR.C  :| | | |_FrameType 
+            :| | |   
+CRC.C       :| | |_CRCcheck 
+            :| | | 
+[unknown]   :| | |_wn_printf 
+            :| | | 
+AX25DUMP.C  :| | |_DumpAX25 
+MISC.C      :| | | |_timestr 
+            :| | | | 
+AX25DUMP.C  :| | | |_DumpAX25hdr 
+AX25SUBR.C  :| | | | |_GetAX25Addr 
+            :| | | | | 
+AX25SUBR.C  :| | | | |_FrameType 
+            :| | | |   
+NETDUMP.C   :| | | |_NetRomDump 
+NETDUMP.C   :| | | | |_NRDumpBdcst 
+AX25SUBR.C  :| | | | | |_GetAX25Addr 
+            :| | | | |   
+MISC.C      :| | | | |_dump_hex 
+MISC.C      :| | | | | |_debug 
+            :| | | | | | 
+MISC.C      :| | | | | |_ctoh 
+            :| | | | |   
+AX25SUBR.C  :| | | | |_GetAX25Addr 
+            :| | | | | 
+AX25SUBR.C  :| | | | |_eol_in 
+            :| | | |   
+AX25DUMP.C  :| | | |_DumpText 
+            :| | | | 
+BUF.C       :| | | |_setbufptr 
+            :| | | | 
+ARPDUMP.C   :| | | |_arp_dump 
+ARPDUMP.C   :| | | | |_ntoharp 
+BUF.C       :| | | | | |_pull16 
+            :| | | | | | 
+BUF.C       :| | | | | |_pull8 
+            :| | | | | | 
+BUF.C       :| | | | | |_buf2data 
+            :| | | | | | 
+[unknown]   :| | | | | |_uchar 
+            :| | | | | | 
+BUF.C       :| | | | | |_pull32 
+            :| | | | |   
+MISC.C      :| | | | |_smsg 
+            :| | | | | 
+ARPDUMP.C   :| | | | |_inet_ntoa 
+[unknown]   :| | | |   |_hibyte 
+            :| | | |   | 
+[unknown]   :| | | |   |_hiword 
+            :| | | |   | 
+[unknown]   :| | | |   |_lobyte 
+            :| | | |   | 
+[unknown]   :| | | |   |_loword 
+            :| | | |     
+AX25SUBR.C  :| | | |_eol_in 
+            :| | |   
+LOG.C       :| | |_LogPacket 
+AX25.C      :| | | |_ax25rec 
+[unknown]   :| | | | |_wn_printf 
+            :| | | | | 
+BUF.C       :| | | | |_setbufptr 
+            :| | | | | 
+BUF.C       :| | | | |_buf2data 
+            :| | | | | 
+BUF.C       :| | | | |_pull8 
+            :| | | | | 
+AX25SUBR.C  :| | | | |_FrameType 
+            :| | | |   
+AX25DUMP.C  :| | | |_DumpAX25 
+MISC.C      :| | |   |_timestr 
+            :| | |   | 
+AX25DUMP.C  :| | |   |_DumpAX25hdr 
+AX25SUBR.C  :| | |   | |_GetAX25Addr 
+            :| | |   | | 
+AX25SUBR.C  :| | |   | |_FrameType 
+            :| | |   |   
+NETDUMP.C   :| | |   |_NetRomDump 
+NETDUMP.C   :| | |   | |_NRDumpBdcst 
+AX25SUBR.C  :| | |   | | |_GetAX25Addr 
+            :| | |   | |   
+MISC.C      :| | |   | |_dump_hex 
+MISC.C      :| | |   | | |_debug 
+            :| | |   | | | 
+MISC.C      :| | |   | | |_ctoh 
+            :| | |   | |   
+AX25SUBR.C  :| | |   | |_GetAX25Addr 
+            :| | |   | | 
+AX25SUBR.C  :| | |   | |_eol_in 
+            :| | |   |   
+AX25DUMP.C  :| | |   |_DumpText 
+            :| | |   | 
+BUF.C       :| | |   |_setbufptr 
+            :| | |   | 
+ARPDUMP.C   :| | |   |_arp_dump 
+ARPDUMP.C   :| | |   | |_ntoharp 
+BUF.C       :| | |   | | |_pull16 
+            :| | |   | | | 
+BUF.C       :| | |   | | |_pull8 
+            :| | |   | | | 
+BUF.C       :| | |   | | |_buf2data 
+            :| | |   | | | 
+[unknown]   :| | |   | | |_uchar 
+            :| | |   | | | 
+BUF.C       :| | |   | | |_pull32 
+            :| | |   | |   
+MISC.C      :| | |   | |_smsg 
+            :| | |   | | 
+ARPDUMP.C   :| | |   | |_inet_ntoa 
+[unknown]   :| | |   |   |_hibyte 
+            :| | |   |   | 
+[unknown]   :| | |   |   |_hiword 
+            :| | |   |   | 
+[unknown]   :| | |   |   |_lobyte 
+            :| | |   |   | 
+[unknown]   :| | |   |   |_loword 
+            :| | |   |     
+AX25SUBR.C  :| | |   |_eol_in 
+            :| | |     
+HEARD.C     :| | |_Heard 
+            :| | | 
+[unknown]   :| | |_DoHeard 
+            :| | | 
+STATUS.C    :| | |_DumpStatus 
+[unknown]   :| |   |_wn_locate 
+            :| |   | 
+[unknown]   :| |   |_wn_printf 
+            :| |     
+STATUS.C    :| |_DumpStatus 
+[unknown]   :| | |_wn_locate 
+            :| | | 
+[unknown]   :| | |_wn_printf 
+            :| |   
+KEY.C       :| |_handle_key 
+[unknown]   :|   |_waitkey 
+            :|   | 
+[unknown]   :|   |_DoHeard 
+            :|   | 
+STATUS.C    :|   |_DumpStatus 
+[unknown]   :|   | |_wn_locate 
+            :|   | | 
+[unknown]   :|   | |_wn_printf 
+            :|   |   
+HELP.C      :|   |_DoHelp 
+[unknown]   :|     |_wn_open 
+            :|     | 
+[unknown]   :|     |_wn_title 
+            :|     | 
+[unknown]   :|     |_wn_printf 
+            :|     | 
+[unknown]   :|     |_wn_close 
+            :|       
+[unknown]   :|_Restore_COM 
+            :| 
+HEARD.C     :|_HeardExit 
+            :| 
+LOG.C       :|_LogExit 
+            :| 
+[unknown]   :|_wn_exit 
+            :  
+------------------------------------------------------------------------------
+

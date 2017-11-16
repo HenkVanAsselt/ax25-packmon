@@ -1,0 +1,3042 @@
+@packmon
+:ax25.c
+% FUNCTIONS:
+
+    ~AX25Level2~
+    ~ax25rec~
+
+% DEFINES:
+
+    ~DEBUG~
+:DEBUG
+^DEBUG
+
+
+ #define DEBUG
+ 
+ Defined in ~ax25.c~ 
+
+:AX25Level2
+^AX25Level2
+                                    (~ax25.c~)
+
+     PURPOSE: This routine is the level 2 upcall
+      SYNTAX: void AX25Level2(AX25_LEVEL1 *p)
+ DESCRIPTION: Called once for each received level1 packet
+              This routine handles logging packets in the debugging log,
+              dumping packets packets on screen,
+              updating the heard stations list.
+     RETURNS: Nothing
+     HISTORY: 940223 V0.2
+    SEE ALSO:  ~Heard~ ~LogPacket~
+
+:ax25rec
+^ax25rec
+                                    (~ax25.c~)
+
+     PURPOSE: Level 1 to Level 2 conversion
+      SYNTAX: AX25_PACKET *ax25rec(AX25_LEVEL1 *p1)
+ DESCRIPTION: Given a pointer to a level 1 packet,
+              converts it to a level 2 packet structure and returns
+              a pointer to the newly allocated level 2 packetstructure.
+     RETURNS: Returns NULL if an error in the structure of
+              the level 1 packet
+     HISTORY:
+
+:heard.c
+% FUNCTIONS:
+
+    ~find_empty~
+    ~find_conn_status~
+    ~del_connection~
+    ~HeardExit~
+    ~HeardInit~
+    ~init_entry~
+    ~find_heard~
+    ~find_oldest~
+    ~Heard~
+    ~DoHeard~
+
+% DEFINES:
+
+:find_empty
+^find_empty
+                                   (~heard.c~)
+
+     PURPOSE: Find first empty entry in heardlist
+      SYNTAX: int find_empty(void);
+ DESCRIPTION: Looks for the first connection entry with 0
+              received packets.
+     RETURNS: 0...MAX_HEARD-1   Index of entry found.
+              HEARD_LIST_FULL   if headlist is full
+     HISTORY: 940701 V0.1 - Initial version
+
+:find_conn_status
+^find_conn_status
+                                   (~heard.c~)
+
+     PURPOSE: Find connection with given status (frametype)
+      SYNTAX: int find_conn_status(int status);
+ DESCRIPTION: -
+     RETURNS: Index of first station with given status
+              HEARD_NOT_FOUND if status not found in heard list.
+     HISTORY: 940701 V0.1 - Initial version
+
+:del_connection
+^del_connection
+                                   (~heard.c~)
+
+     PURPOSE: Delete connections from heardlist with given
+              timeinterval
+      SYNTAX: void del_connection(int interval);
+ DESCRIPTION: int interval = interval in seconds since last heard
+     RETURNS: nothing
+     HISTORY: 940701 - Initial version
+
+:HeardExit
+^HeardExit
+                                   (~heard.c~)
+
+     PURPOSE: Exit from the heard list
+      SYNTAX: void HeardExit(void);
+ DESCRIPTION: Closes all open files and frees memory
+     RETURNS: nothing
+     HISTORY: 940305 V0.1 - Initial version
+
+:HeardInit
+^HeardInit
+                                   (~heard.c~)
+
+     PURPOSE: Initialize the HEARD list structure.
+      SYNTAX: void HeardInit(void);
+ DESCRIPTION:
+     RETURNS:
+     HISTORY:
+
+:init_entry
+^init_entry
+                                   (~heard.c~)
+
+     PURPOSE: Initialize entry of heard list
+      SYNTAX: void init_entry(int i);
+ DESCRIPTION: Intializes entry i of heard list
+     RETURNS: nothing
+     HISTORY: 940305 V0.1 - Initial version
+
+:find_heard
+^find_heard
+                                   (~heard.c~)
+
+     PURPOSE: find connection in the heard list
+      SYNTAX: int find_heard(ax25_addr source,ax25_addr dest);
+ DESCRIPTION: Does a linear search in the heard list
+     RETURNS: index of connection if found in the list (0...MAXHEARD-1)
+              HEARD_NOT_FOUND   if connection not found
+              HEARD_LIST_FULL   if list is full
+     HISTORY: 940403 V0.1 - Initial version
+              940624 V0.2 - Deals with connections instead of
+                            single stations
+
+:find_oldest
+^find_oldest
+                                   (~heard.c~)
+
+     PURPOSE: find station with oldest timestamp in the heard list
+      SYNTAX: int find_oldest(void)
+ DESCRIPTION: Does linear search in heardlist
+     RETURNS: Index of station with oldest time stamp
+     HISTORY: 940405 V0.1 - Initial version
+
+:Heard
+^Heard
+                                   (~heard.c~)
+
+     PURPOSE: Heard list upcall for level 2 packets.
+      SYNTAX: void Heard(AX25_PACKET *p);
+ DESCRIPTION: This routine is called once for all received level 2 packets.
+     RETURNS: nothing
+     HISTORY: 940223 V0.1
+
+:DoHeard
+^DoHeard
+                                   (~heard.c~)
+
+     PURPOSE: Perform the nodes heard command
+      SYNTAX: void DoHeard(FILE *f);
+ DESCRIPTION:
+     RETURNS:
+     HISTORY: 940324 V0.2 - Now dumps to file f
+
+:arpdump.c
+% FUNCTIONS:
+
+    ~inet_ntoa~
+    ~ntoharp~
+    ~arp_dump~
+
+% DEFINES:
+
+    ~NULLCHAR~            '
+    ~EADDR_LEN~           6
+    ~IP_TYPE~             0x800
+    ~ARP_TYPE~            0x806
+    ~REVARP_TYPE~         0x8035
+    ~AADDR_LEN~           1
+    ~ARC_IP~              0xf0
+    ~ARC_ARP~             0xf1
+:NULLCHAR
+^NULLCHAR
+
+
+ #define NULLCHAR '\0'
+ 
+ Defined in ~arpdump.c~ 
+
+:EADDR_LEN
+^EADDR_LEN
+
+
+ #define	EADDR_LEN	6
+ 
+ Defined in ~arpdump.c~ 
+
+:IP_TYPE
+^IP_TYPE
+
+
+ #define	IP_TYPE		0x800	/* Type field for IP */
+ 
+ Defined in ~arpdump.c~ 
+
+:ARP_TYPE
+^ARP_TYPE
+
+
+ #define ARP_TYPE    0x806   /* Type field for ARP */
+ 
+ Defined in ~arpdump.c~ 
+
+:REVARP_TYPE
+^REVARP_TYPE
+
+
+ #define REVARP_TYPE 0x8035  /* Type field for reverse ARP */
+ 
+ Defined in ~arpdump.c~ 
+
+:AADDR_LEN
+^AADDR_LEN
+
+
+ #define AADDR_LEN   1
+ 
+ Defined in ~arpdump.c~ 
+
+:ARC_IP
+^ARC_IP
+
+
+ #define	ARC_IP		0xf0	/* Type field for IP */
+ 
+ Defined in ~arpdump.c~ 
+
+:ARC_ARP
+^ARC_ARP
+
+
+ #define	ARC_ARP		0xf1	/* Type field for ARP */
+ 
+ Defined in ~arpdump.c~ 
+
+:inet_ntoa
+^inet_ntoa
+                                  (~arpdump.c~)
+
+     PURPOSE: Convert an internet address (in host byte order)
+              to a dotted decimal ascii string, e.g., 255.255.255.255\0
+      SYNTAX:
+ DESCRIPTION:
+     RETURNS:
+     HISTORY:
+
+:ntoharp
+^ntoharp
+                                  (~arpdump.c~)
+
+     PURPOSE: Convert an incoming ARP packet into a host-format structure
+      SYNTAX: int ntoharp(struct arp *arp, MBUF *buf);
+ DESCRIPTION:
+     RETURNS: Always 0
+     HISTORY: 940306 V0.1
+
+:arp_dump
+^arp_dump
+                                  (~arpdump.c~)
+
+     PURPOSE: Dump arp packet
+      SYNTAX: char *arp_dump(FILE *fp, MBUF *bpp, BYTE flags);
+ DESCRIPTION: Dumps ARP packet 'bpp' to FILE 'fp'
+     RETURNS: Nothing
+     HISTORY: 940324 V0.1
+
+:log.c
+% FUNCTIONS:
+
+    ~init_station~
+    ~find_station~
+    ~add_station~
+    ~LogInit~
+    ~LogExit~
+    ~LogPacket~
+    ~log_bindata~
+
+% DEFINES:
+
+    ~LOG_C~
+    ~#define~             HEX
+:LOG_C
+^LOG_C
+
+
+ #define LOG_C
+ 
+ Defined in ~log.c~ 
+
+:#define
+^#define
+
+
+ /* #define HEX    */            /* Hexadecimal dump in logfile */
+ 
+ Defined in ~log.c~ 
+
+:init_station
+^init_station
+                                    (~log.c~)
+
+     PURPOSE: Initialize variables of a station
+      SYNTAX: init_station(STATION *station);
+ DESCRIPTION:
+     RETURNS: Nothing
+     HISTORY: 940417 V0.1
+    SEE ALSO:  ~STATION~
+
+:find_station
+^find_station
+                                    (~log.c~)
+
+     PURPOSE: Find station call in sorted single linked list
+      SYNTAX: STATION *find_station(ax25_addr call);
+ DESCRIPTION: -
+     RETURNS: Pointer structure in list if found, else returns NULL
+     HISTORY: 940415 V0.1
+    SEE ALSO:  ~STATION~
+
+:add_station
+^add_station
+                                    (~log.c~)
+
+     PURPOSE: Store a pointer in a Single Linked Sorted list.
+      SYNTAX: DATA *SLSortStore(DATA *info, DATA *start, DATA **last)
+ DESCRIPTION: See 'Advance Modula-2' pp 90
+     RETURNS: Pointer to starting point
+     HISTORY: 05-Apr-1993 20:18:19 V0.1
+    SEE ALSO:  ~STATION~
+
+:LogInit
+^LogInit
+                                    (~log.c~)
+
+     PURPOSE: Initialize the logging system
+      SYNTAX: void LogInit(void);
+ DESCRIPTION:
+     RETURNS: nothing
+     HISTORY: 940222 V0.1
+
+:LogExit
+^LogExit
+                                    (~log.c~)
+
+     PURPOSE: Exit the logging system
+      SYNTAX: void LogExit(void);
+ DESCRIPTION:
+     RETURNS: Nothing
+     HISTORY: 940328 V0.1
+
+:LogPacket
+^LogPacket
+                                    (~log.c~)
+
+     PURPOSE:
+      SYNTAX: void LogPacket(struct ax25_level1 *p, int dir);
+ DESCRIPTION: Given a pointer to a level 1 packet, allocates a record
+              for the packet and stores the packet,
+              direction (incoming or outgoing), and the time.
+     RETURNS: nothing
+     HISTORY: 940222 V0.1
+
+:log_bindata
+^log_bindata
+                                    (~log.c~)
+
+     PURPOSE:
+      SYNTAX: FILE *log_bindata(FILE *file, struct ax25_packet *p);
+ DESCRIPTION: example: #BIN#3944#|37936#$1C7DA29C#D:\SP7\REM\CONFIG.ARJ
+              if parameter file == NULL, a new file will be opened
+
+ +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+    Sequence of events:
+    1. Receiver enters ESC RB filename.
+    2. Sender enters ESC SB filename.
+    3. Sending program transmits "#BIN#n" where 'n' is the number of
+       bytes in the file.
+    4. Receiving program transmits "#OK#".
+    5. Sending program transmits file.
+    6. When finished (byte count decremented to zero), receiving
+       program closes the file and transmits "#OK#nnnn" where 'nnnn'
+       is a decimal 16-bit CRC.  This value is also displayed on the
+       console screen at the end of send or receive.
+
+    If the transfer is aborted, the incomplete file is deleted.
+    The file is also deleted if the CRC check fails.
+
+    The exact IDs exchanged by the two partners are:
+
+    #BIN#nnnnn#|ccccc$xxxxx#fn#
+        nnnnn = length in bytes
+        ccccc = CRC of the whole file
+        xxxxx = packed file date and time
+        fn    = file name
+
+    #OK#fn#
+        fn    = file name
+ ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+     RETURNS: pointer to file
+     HISTORY: 940419 V0.1
+
+:ax25dump.c
+% FUNCTIONS:
+
+    ~dump_digis~
+    ~DumpAX25hdr~
+    ~DumpText~
+    ~DumpAX25~
+
+% DEFINES:
+
+    ~DEBUG~
+    ~deb(exp)~
+    ~deb(exp)~
+:DEBUG
+^DEBUG
+
+
+ #define DEBUG
+ 
+ Defined in ~ax25dump.c~ 
+
+:deb(exp)
+^deb(exp)
+
+ #define deb(exp) { \
+     fprintf(stdaux, _debugstring, __FILE__, __LINE__, #exp); \
+                  }
+ 
+ Defined in ~ax25dump.c~ 
+
+:deb(exp)
+^deb(exp)
+
+
+ #define deb(exp)
+ 
+ Defined in ~ax25dump.c~ 
+
+:dump_digis
+^dump_digis
+                                  (~ax25dump.c~)
+
+     PURPOSE: Dump digipeaters
+      SYNTAX: char *dump_digis(struct ax25_packet *p);
+ DESCRIPTION: Dumps digipeater of packet in a string
+     RETURNS: Pointer to string with digipeaters
+     HISTORY: 940408 v0.1
+
+:DumpAX25hdr
+^DumpAX25hdr
+                                  (~ax25dump.c~)
+
+     PURPOSE: Given a pointer to a Level 2 packet structure, creates a
+              human readable level 2 header and info field in ptext.
+      SYNTAX: char *DumpAX25hdr(struct ax25_packet *p)
+ DESCRIPTION: struct ax25_packet *p = pointer to AX25 packet
+     RETURNS: pointer to local static string with header dump
+     HISTORY: 940311 V0.1 - Initial version
+
+:DumpText
+^DumpText
+                                  (~ax25dump.c~)
+
+     PURPOSE: Dump text from packet with PID_TEXT
+      SYNTAX: char *DumpText(BYTE *d, unsigned int len);
+ DESCRIPTION:
+     RETURNS: Pointer to text string
+     HISTORY:
+
+:DumpAX25
+^DumpAX25
+                                  (~ax25dump.c~)
+
+     PURPOSE: Convert ax25 packet to human readable string
+      SYNTAX: char *DumpAX25(struct ax25_packet *p);
+ DESCRIPTION:
+     RETURNS: pointer to string containing converted packet
+     HISTORY: 940212 V0.1
+              940312 V0.2 - Now return pointer to string
+
+:status.c
+% FUNCTIONS:
+
+    ~DumpStatus~
+
+% DEFINES:
+
+:DumpStatus
+^DumpStatus
+                                   (~status.c~)
+
+     PURPOSE: Dumps the current Packmon status variables to the log file.
+      SYNTAX: void DumpStatus();
+ DESCRIPTION:
+     RETURNS:
+     HISTORY: 940326 V0.2 - Now dumps status to fileptr
+              940328 V0.3 - Dumps status to HvA window
+
+:config.c
+% FUNCTIONS:
+
+    ~configure~
+    ~close_windows~
+
+% DEFINES:
+
+:configure
+^configure
+                                   (~config.c~)
+
+     PURPOSE: Setup global variables
+      SYNTAX: void configure(void);
+ DESCRIPTION:
+     RETURNS: nothing
+     HISTORY: 940328 V0.1
+
+:close_windows
+^close_windows
+                                   (~config.c~)
+
+     PURPOSE: close open windows
+      SYNTAX: void close_windows(void);
+ DESCRIPTION: Called by exit()
+     RETURNS: nothing
+     HISTORY: 940624 V0.1
+
+:misc.c
+% FUNCTIONS:
+
+    ~get_frametype_str~
+    ~timestr~
+    ~debug~
+    ~smsg~
+    ~ctoh~
+    ~dump_hex~
+
+% DEFINES:
+
+    ~FALSE~               0
+    ~TRUE~                !FALSE
+:FALSE
+^FALSE
+
+
+ #define FALSE 0
+ 
+ Defined in ~misc.c~ 
+
+:TRUE
+^TRUE
+
+
+ #define TRUE !FALSE
+ 
+ Defined in ~misc.c~ 
+
+:get_frametype_str
+^get_frametype_str
+                                    (~misc.c~)
+
+     PURPOSE: Get frametype in human readable form
+      SYNTAX: char *get_frametype_str(int frametype);
+ DESCRIPTION: int frametype:    frametype
+     RETURNS: Pointer to string indicating frametype
+     HISTORY: 940701 V0.1
+
+:timestr
+^timestr
+                                    (~misc.c~)
+
+     PURPOSE: Given a time in seconds since Jan 1, 1970
+      SYNTAX: char *timestr(time_t t)
+ DESCRIPTION:
+     RETURNS:
+     HISTORY:
+
+:debug
+^debug
+                                    (~misc.c~)
+
+     PURPOSE: Print debug information
+      SYNTAX: void debug(char *format, ...);
+ DESCRIPTION: prints debug information.
+              Will add a CR/LF if this is not at end of string
+     RETURNS: nothing
+     HISTORY: 940306 V0.1
+              940621 V0.1 - Added CR/LF detection
+
+:smsg
+^smsg
+                                    (~misc.c~)
+
+     PURPOSE: Select from an array of strings,
+              or return ascii number if out of range
+      SYNTAX: char *smsg(char *msgs[], unsigned nmsgs, unsinged n) ;
+ DESCRIPTION:
+     RETURNS:
+     HISTORY:
+
+:ctoh
+^ctoh
+                                    (~misc.c~)
+
+     PURPOSE: Convert byte into two-byte hex-ascii
+      SYNTAX: void ctoh(char *s, char c);
+ DESCRIPTION:
+     RETURNS: nothing
+     HISTORY: 940411 V0.1
+
+:dump_hex
+^dump_hex
+                                    (~misc.c~)
+
+     PURPOSE: Dump data fields of packet in hex, shifted ascii and straight ascii
+      SYNTAX: dump_hex(unsigned char *d, int len);
+ DESCRIPTION: unsigned char *d = pointer to array of data
+              int len          = length of data array to dump
+     RETURNS: pointer to decoded text
+     HISTORY: 940411 V0.1
+
+:buf.c
+% FUNCTIONS:
+
+    ~setbufptr~
+    ~pull32~
+    ~pull16~
+    ~pull8~
+    ~pullchar~
+    ~get16~
+    ~get32~
+    ~buf2data~
+    ~pullup~
+
+% DEFINES:
+
+:setbufptr
+^setbufptr
+                                    (~buf.c~)
+
+     PURPOSE: Set buffer pointer
+      SYNTAX: void setbufptr(MBUF *buffer, unsigned long n) ;
+ DESCRIPTION: Buffer uses 0-offset
+     RETURNS:
+     HISTORY:
+
+:pull32
+^pull32
+                                    (~buf.c~)
+
+     PURPOSE: read a int32 from buffer
+      SYNTAX: int32 pull32(MBUF *buffer);
+ DESCRIPTION:
+     RETURNS:
+     HISTORY:
+
+:pull16
+^pull16
+                                    (~buf.c~)
+
+     PURPOSE:
+      SYNTAX:
+ DESCRIPTION:
+     RETURNS:
+     HISTORY:
+
+:pull8
+^pull8
+                                    (~buf.c~)
+
+     PURPOSE:
+      SYNTAX:
+ DESCRIPTION:
+     RETURNS:
+     HISTORY:
+
+:pullchar
+^pullchar
+                                    (~buf.c~)
+
+     PURPOSE: Pull single character from mbuf
+      SYNTAX: int pullchar(MBUF *buf);
+ DESCRIPTION:
+     RETURNS: character, pulled from buffer
+     HISTORY: 940703 V0.1 - Initial version
+
+:get16
+^get16
+                                    (~buf.c~)
+
+     PURPOSE: Get int16 variable from buffer
+      SYNTAX: int16 get16(register char *cp);
+ DESCRIPTION:
+     RETURNS: value of int16 read from buffer
+     HISTORY: 940627 V0.1
+
+:get32
+^get32
+                                    (~buf.c~)
+
+     PURPOSE: Get int32 variable from buffer
+      SYNTAX: int32 get32(register char *cp);
+ DESCRIPTION:
+     RETURNS: value of int32 read from buffer
+     HISTORY: 940627 V0.1
+
+:buf2data
+^buf2data
+                                    (~buf.c~)
+
+     PURPOSE: Copy a number of bytes to an array of char
+      SYNTAX: void buf2data(unsigned char *dest, MBUF *src, int16 n)
+ DESCRIPTION: unsigned char *dest = destination arrray
+              MBUF *src           = source buffer
+              int16 n             = number of bytes to copy
+     RETURNS: nothing
+     HISTORY: 930311 V0.2 - Added adjustment of 'cnt' (remaining)
+
+:pullup
+^pullup
+                                    (~buf.c~)
+
+     PURPOSE: Copy and delete "cnt" bytes from beginning of packet.
+      SYNTAX: int16 pullup(MBUF *bph, unsigned char *buf, int16 cnt);
+ DESCRIPTION:
+     RETURNS: Return number of bytes actually pulled off
+     HISTORY:
+
+:netdump.c
+% FUNCTIONS:
+
+    ~NetRomDump~
+
+% DEFINES:
+
+    ~DEBUG~
+    ~deb(exp)~
+    ~deb(exp)~
+:DEBUG
+^DEBUG
+
+
+ #define DEBUG
+ 
+ Defined in ~netdump.c~ 
+
+:deb(exp)
+^deb(exp)
+
+ #define deb(exp) { \
+     fprintf(stdaux, _debugstring, __FILE__, __LINE__, #exp); \
+                  }
+ 
+ Defined in ~netdump.c~ 
+
+:deb(exp)
+^deb(exp)
+
+
+ #define deb(exp)
+ 
+ Defined in ~netdump.c~ 
+
+:NetRomDump
+^NetRomDump
+                                  (~netdump.c~)
+
+     PURPOSE: Dump netrom message
+      SYNTAX: char *NetRomDump(MBUF *bpp, BYTE flags);
+ DESCRIPTION: Given a Net/Rom packet, dumps it in human readable
+              form (adds it to ptext)
+     RETURNS: pointer to readable text string
+     HISTORY: 940723 V0.2
+
+:iphdr.c
+% FUNCTIONS:
+
+    ~get_IP_hdr~
+    ~ip_dump~
+
+% DEFINES:
+
+:get_IP_hdr
+^get_IP_hdr
+                                   (~iphdr.c~)
+
+     PURPOSE: Extract an IP header from buffer
+      SYNTAX: int get_IP_hdr(IP *ipbuf, char *buf, int len);
+ DESCRIPTION:
+     RETURNS: TRUE if succesfull, FALSE if not
+     HISTORY: 940627 V0.1
+
+:ip_dump
+^ip_dump
+                                   (~iphdr.c~)
+
+     PURPOSE: Dump IP header
+      SYNTAX: char *ip_dump(BYTE *d, int len);
+ DESCRIPTION: Calls get_IP_hdr to decode IP header
+     RETURNS: pointer to decoded text
+     HISTORY: 940627 V0.1
+
+:packmon.c
+% FUNCTIONS:
+
+    ~mainloop~
+    ~main~
+
+% DEFINES:
+
+    ~MAINFILE~
+:MAINFILE
+^MAINFILE
+
+
+ #define MAINFILE
+ 
+ Defined in ~packmon.c~ 
+
+:mainloop
+^mainloop
+                                  (~packmon.c~)
+
+     PURPOSE: Perform the main loop
+      SYNTAX: void mainloop(void);
+ DESCRIPTION: -
+     RETURNS: nothing
+     HISTORY: 940508 V0.1
+
+:main
+^main
+                                  (~packmon.c~)
+
+     PURPOSE: Main module of packmon.exe
+      SYNTAX:
+ DESCRIPTION:
+     RETURNS:
+     HISTORY: 940122 V0.1
+
+:ax25subr.c
+% FUNCTIONS:
+
+    ~is_ax25multi~
+    ~eol_in~
+    ~FrameType~
+    ~GetAX25Addr~
+    ~CompAX25Addr~
+    ~GetAX25Path~
+
+% DEFINES:
+
+:is_ax25multi
+^is_ax25multi
+                                  (~ax25subr.c~)
+
+     PURPOSE: Check if given address is a AX25 multi address
+      SYNTAX: int is_ax25multi(struct ax25_addr addr);
+ DESCRIPTION:
+     RETURNS: Index in multi address list if found
+              -1 if not found
+     HISTORY: 940405 V0.1
+
+:eol_in
+^eol_in
+                                  (~ax25subr.c~)
+
+     PURPOSE: Given a EOL convention code, a string and a length,
+              converts a string with the appropriate EOL convention
+              to a '\n' terminated string.
+      SYNTAX: void eol_in(int conv, char *s, int l);
+ DESCRIPTION:
+     RETURNS:
+     HISTORY:
+
+:FrameType
+^FrameType
+                                  (~ax25subr.c~)
+
+     PURPOSE: Given the control byte, returns the type of the frame.
+      SYNTAX: int FrameType(BYTE c);
+ DESCRIPTION:
+     RETURNS:
+     HISTORY:
+    SEE ALSO: 
+
+:GetAX25Addr
+^GetAX25Addr
+                                  (~ax25subr.c~)
+
+     PURPOSE:
+      SYNTAX: char *GetAX25Addr(struct ax25_addr *a);
+ DESCRIPTION: Given a pointer to an ax25_addr record,
+              returns an ASCII string of the address in human readable
+              form:  'N8KEI-3'
+     RETURNS:
+     HISTORY:
+
+:CompAX25Addr
+^CompAX25Addr
+                                  (~ax25subr.c~)
+
+     PURPOSE: Compares two AX.25 addresses.  .
+      SYNTAX: int CompAX25Addr(struct ax25_addr *a1, struct ax25_addr *a2)
+ DESCRIPTION:
+     RETURNS: TRUE if the two AX.25 addresses are NOT equal
+     HISTORY:
+
+:GetAX25Path
+^GetAX25Path
+                                  (~ax25subr.c~)
+
+     PURPOSE: Get path of a given packet
+      SYNTAX: char *GetAX25Path(struct ax25_packet *p)
+ DESCRIPTION: Given a pointer to a level 2 packet, parses, and returns
+              a pointer to a human readable string in the form:
+              "N8KEI [via WB2EMS]"
+     RETURNS: Pointer to decoded path
+     HISTORY: 940722 V0.1
+
+:ipdump.c
+% FUNCTIONS:
+
+
+% DEFINES:
+
+    ~fprintf~             traceprintf
+:fprintf
+^fprintf
+
+
+ #define fprintf traceprintf
+ 
+ Defined in ~ipdump.c~ 
+
+:crc.c
+% FUNCTIONS:
+
+    ~get_CRC~
+    ~CRCcheck~
+
+% DEFINES:
+
+:get_CRC
+^get_CRC
+                                    (~crc.c~)
+
+     PURPOSE: Get CRC of a level 1 packet
+      SYNTAX: WORD get_CRC(struct ax25_level1 *packet);
+ DESCRIPTION: -
+     RETURNS: CRC of packet received (not calculated)
+     HISTORY: 940624 V0.1
+
+:CRCcheck
+^CRCcheck
+                                    (~crc.c~)
+
+     PURPOSE: Generates a CRC of a level 1 packet, and checks
+              this with the existing CRC
+      SYNTAX: int CRCCheck(struct ax25_level1 *packet);
+ DESCRIPTION: -
+     RETURNS: 1 if CRC is valid (equal), 0 if not
+     HISTORY: 940324 V0.1
+
+:key.c
+% FUNCTIONS:
+
+    ~handle_key~
+
+% DEFINES:
+
+:handle_key
+^handle_key
+                                    (~key.c~)
+
+     PURPOSE: Handle keyboard input
+      SYNTAX: int handle_key(void);
+ DESCRIPTION: Checks if a key is available in the input buffer
+              If so, the key will be read and processed.
+     RETURNS: key read from keyboard buffer
+     HISTORY: 940228 V0.1
+
+:help.c
+% FUNCTIONS:
+
+    ~DoHelp~
+
+% DEFINES:
+
+:DoHelp
+^DoHelp
+                                    (~help.c~)
+
+     PURPOSE: Show help window
+      SYNTAX: void DoHelp(void);
+ DESCRIPTION: -
+     RETURNS: Nothing
+     HISTORY: 940609 V0.1
+
+:crc.h
+% FUNCTIONS:
+
+
+% DEFINES:
+
+:crctab.h
+% FUNCTIONS:
+
+
+% DEFINES:
+
+:CRC_TABLE
+
+WORD crc_table[] = {
+        0,  4489,  8978, 12955, 17956, 22445, 25910, 29887,
+    35912, 40385, 44890, 48851, 51820, 56293, 59774, 63735,
+     4225,   264, 13203,  8730, 22181, 18220, 30135, 25662,
+    40137, 36160, 49115, 44626, 56045, 52068, 63999, 59510,
+     8450, 12427,   528,  5017, 26406, 30383, 17460, 21949,
+    44362, 48323, 36440, 40913, 60270, 64231, 51324, 55797,
+    12675,  8202,  4753,   792, 30631, 26158, 21685, 17724,
+    48587, 44098, 40665, 36688, 64495, 60006, 55549, 51572,
+    16900, 21389, 24854, 28831,  1056,  5545, 10034, 14011,
+    52812, 57285, 60766, 64727, 34920, 39393, 43898, 47859,
+    21125, 17164, 29079, 24606,  5281,  1320, 14259,  9786,
+    57037, 53060, 64991, 60502, 39145, 35168, 48123, 43634,
+    25350, 29327, 16404, 20893,  9506, 13483,  1584,  6073,
+    61262, 65223, 52316, 56789, 43370, 47331, 35448, 39921,
+    29575, 25102, 20629, 16668, 13731,  9258,  5809,  1848,
+    65487, 60998, 56541, 52564, 47595, 43106, 39673, 35696,
+    33800, 38273, 42778, 46739, 49708, 54181, 57662, 61623,
+     2112,  6601, 11090, 15067, 20068, 24557, 28022, 31999,
+    38025, 34048, 47003, 42514, 53933, 49956, 61887, 57398,
+     6337,  2376, 15315, 10842, 24293, 20332, 32247, 27774,
+    42250, 46211, 34328, 38801, 58158, 62119, 49212, 53685,
+    10562, 14539,  2640,  7129, 28518, 32495, 19572, 24061,
+    46475, 41986, 38553, 34576, 62383, 57894, 53437, 49460,
+    14787, 10314,  6865,  2904, 32743, 28270, 23797, 19836,
+    50700, 55173, 58654, 62615, 32808, 37281, 41786, 45747,
+    19012, 23501, 26966, 30943,  3168,  7657, 12146, 16123,
+    54925, 50948, 62879, 58390, 37033, 33056, 46011, 41522,
+    23237, 19276, 31191, 26718,  7393,  3432, 16371, 11898,
+    59150, 63111, 50204, 54677, 41258, 45219, 33336, 37809,
+    27462, 31439, 18516, 23005, 11618, 15595,  3696,  8185,
+    63375, 58886, 54429, 50452, 45483, 40994, 37561, 33584,
+    31687, 27214, 22741, 18780, 15843, 11370,  7921,  3960
+};
+
+
+:log.h
+% FUNCTIONS:
+
+
+% DEFINES:
+
+    ~MAXID~               40
+:MAXID
+^MAXID
+
+
+ #define MAXID    40     /* max length of broadcast ID */
+ 
+ Defined in ~log.h~ 
+
+:packet_log
+:STATION
+  typedef struct packet_log {
+     struct ax25_addr    call;       /* callsign of node           */
+     long                time;       /* time sent                  */
+     BYTE                s_nr;       /* Sended number              */
+     FILE                *fptr;      /* File pointer               */
+     long                count;      /* # packets rec'd  */
+     long                bytes;      /* # bytes sent     */
+     long                flags;      /* node flags       */
+     BYTE                id[MAXID];  /* node ID          */
+     char                path[80];   /* Path of station  */
+     int                 dir;        /* direction                  */
+     struct  packet_log  *next;      /* next packet in linked list */
+     struct  ax25_level1 p;          /* the level 1 packet         */
+ }
+
+ 
+ Defined in ~log.h~ 
+
+
+:ax25.h
+% FUNCTIONS:
+
+
+% DEFINES:
+
+    ~_AX25_H~
+    ~MAXDIGIS~            7
+    ~ALEN~                6
+    ~AXALEN~              7
+    ~AXBUF~               10
+    ~DUMP_HEADER~         1
+    ~DUMP_INFO~           2
+    ~MAX_MULTI_ADDR~      9
+    ~MA_NONE~             -1
+    ~MA_QST~              0
+    ~MA_NODES~            1
+    ~MA_MAIL~             2
+    ~MA_ID~               3
+    ~MA_OPEN~             4
+    ~MA_CQ~               5
+    ~MA_BEACON~           6
+    ~MA_RMNC~             7
+    ~MA_ALL~              8
+    ~MAXCLEN~             6
+    ~I~                   0x00
+    ~S~                   0x01
+    ~RR~                  0x01
+    ~RNR~                 0x05
+    ~REJ~                 0x09
+    ~U~                   0x03
+    ~SABM~                0x2f
+    ~DISC~                0x43
+    ~DM~                  0x0f
+    ~UA~                  0x63
+    ~FRMR~                0x87
+    ~UI~                  0x03
+    ~PF~                  0x10
+    ~UNKNOWN~             0
+    ~COMMAND~             1
+    ~RESPONSE~            2
+    ~SSIDMASK~            0x1e
+    ~REPEATED~            0x80
+    ~PID_X25~             0x01
+    ~PID_SEGMENT~         0x08
+    ~PID_TEXNET~          0xc3
+    ~PID_LQ~              0xc4
+    ~PID_APPLETALK~       0xca
+    ~PID_APPLEARP~        0xcb
+    ~PID_IP~              0xcc
+    ~PID_ARP~             0xcd
+    ~PID_RARP~            0xce
+    ~PID_NETROM~          0xcf
+    ~PID_NO_L3~           0xf0
+    ~PID_TEXT~            0xf0
+:_AX25_H
+^_AX25_H
+
+
+ #define _AX25_H
+ 
+ Defined in ~ax25.h~ 
+
+:MAXDIGIS
+^MAXDIGIS
+
+
+ #define MAXDIGIS    7   /* Maximum number of digipeaters */
+ 
+ Defined in ~ax25.h~ 
+
+:ALEN
+^ALEN
+
+
+ #define ALEN        6   /* Number of chars in callsign field */
+ 
+ Defined in ~ax25.h~ 
+
+:AXALEN
+^AXALEN
+
+
+ #define AXALEN      7   /* Total AX.25 address length, including SSID */
+ 
+ Defined in ~ax25.h~ 
+
+:AXBUF
+^AXBUF
+
+
+ #define AXBUF       10  /* Buffer size for maximum-length ascii call */
+ 
+ Defined in ~ax25.h~ 
+
+:DUMP_HEADER
+^DUMP_HEADER
+
+
+ #define DUMP_HEADER 1
+ 
+ Defined in ~ax25.h~ 
+
+:DUMP_INFO
+^DUMP_INFO
+
+
+ #define DUMP_INFO   2
+ 
+ Defined in ~ax25.h~ 
+
+:MAX_MULTI_ADDR
+^MAX_MULTI_ADDR
+
+
+ #define MAX_MULTI_ADDR 9
+ 
+ Defined in ~ax25.h~ 
+
+:MA_NONE
+^MA_NONE
+
+
+ #define MA_NONE        -1
+ 
+ Defined in ~ax25.h~ 
+
+:MA_QST
+^MA_QST
+
+
+ #define MA_QST     0
+ 
+ Defined in ~ax25.h~ 
+
+:MA_NODES
+^MA_NODES
+
+
+ #define MA_NODES   1
+ 
+ Defined in ~ax25.h~ 
+
+:MA_MAIL
+^MA_MAIL
+
+
+ #define MA_MAIL    2
+ 
+ Defined in ~ax25.h~ 
+
+:MA_ID
+^MA_ID
+
+
+ #define MA_ID      3
+ 
+ Defined in ~ax25.h~ 
+
+:MA_OPEN
+^MA_OPEN
+
+
+ #define MA_OPEN    4
+ 
+ Defined in ~ax25.h~ 
+
+:MA_CQ
+^MA_CQ
+
+
+ #define MA_CQ      5
+ 
+ Defined in ~ax25.h~ 
+
+:MA_BEACON
+^MA_BEACON
+
+
+ #define MA_BEACON  6
+ 
+ Defined in ~ax25.h~ 
+
+:MA_RMNC
+^MA_RMNC
+
+
+ #define MA_RMNC    7
+ 
+ Defined in ~ax25.h~ 
+
+:MA_ALL
+^MA_ALL
+
+
+ #define MA_ALL     8
+ 
+ Defined in ~ax25.h~ 
+
+:MAXCLEN
+^MAXCLEN
+
+
+ #define MAXCLEN     6   /* # of characters in callsign */
+ 
+ Defined in ~ax25.h~ 
+
+:I
+^I
+
+
+ #define I       0x00        /* Information */
+ 
+ Defined in ~ax25.h~ 
+
+:S
+^S
+
+
+ #define S       0x01        /* Supervisory */
+ 
+ Defined in ~ax25.h~ 
+
+:RR
+^RR
+
+
+ #define RR      0x01        /* Receiver ready */
+ 
+ Defined in ~ax25.h~ 
+
+:RNR
+^RNR
+
+
+ #define RNR     0x05        /* Receiver not ready */
+ 
+ Defined in ~ax25.h~ 
+
+:REJ
+^REJ
+
+
+ #define REJ     0x09        /* Reject */
+ 
+ Defined in ~ax25.h~ 
+
+:U
+^U
+
+
+ #define U       0x03        /* unnumbered frames */
+ 
+ Defined in ~ax25.h~ 
+
+:SABM
+^SABM
+
+
+ #define SABM    0x2f        /* Connect request */
+ 
+ Defined in ~ax25.h~ 
+
+:DISC
+^DISC
+
+
+ #define DISC    0x43        /* Disconnect */
+ 
+ Defined in ~ax25.h~ 
+
+:DM
+^DM
+
+
+ #define DM      0x0f        /* disconnected mode */
+ 
+ Defined in ~ax25.h~ 
+
+:UA
+^UA
+
+
+ #define UA      0x63        /* unnumbered acknowledge */
+ 
+ Defined in ~ax25.h~ 
+
+:FRMR
+^FRMR
+
+
+ #define FRMR    0x87        /* frame reject */
+ 
+ Defined in ~ax25.h~ 
+
+:UI
+^UI
+
+
+ #define UI      0x03        /* unnumbered information */
+ 
+ Defined in ~ax25.h~ 
+
+:PF
+^PF
+
+
+ #define PF      0x10        /* poll/final bit */
+ 
+ Defined in ~ax25.h~ 
+
+:UNKNOWN
+^UNKNOWN
+
+
+ #define UNKNOWN 0       /* pre-AX.25 level 2 */
+ 
+ Defined in ~ax25.h~ 
+
+:COMMAND
+^COMMAND
+
+
+ #define COMMAND 1
+ 
+ Defined in ~ax25.h~ 
+
+:RESPONSE
+^RESPONSE
+
+
+ #define RESPONSE 2
+ 
+ Defined in ~ax25.h~ 
+
+:SSIDMASK
+^SSIDMASK
+
+
+ #define SSIDMASK    0x1e    /* mask for SSID nibble */
+ 
+ Defined in ~ax25.h~ 
+
+:REPEATED
+^REPEATED
+
+
+ #define REPEATED    0x80    /* has been repeated bit */
+ 
+ Defined in ~ax25.h~ 
+
+:PID
+:PID_X25
+^PID_X25
+
+
+ #define PID_X25       0x01  /* CCITT X.25 PLP */
+ 
+ Defined in ~ax25.h~ 
+
+:PID_SEGMENT
+^PID_SEGMENT
+
+
+ #define PID_SEGMENT   0x08  /* Segmentation fragment */
+ 
+ Defined in ~ax25.h~ 
+
+:PID_TEXNET
+^PID_TEXNET
+
+
+ #define PID_TEXNET    0xc3  /* TEXNET datagram protocol */
+ 
+ Defined in ~ax25.h~ 
+
+:PID_LQ
+^PID_LQ
+
+
+ #define PID_LQ        0xc4  /* Link quality protocol */
+ 
+ Defined in ~ax25.h~ 
+
+:PID_APPLETALK
+^PID_APPLETALK
+
+
+ #define PID_APPLETALK 0xca  /* Appletalk */
+ 
+ Defined in ~ax25.h~ 
+
+:PID_APPLEARP
+^PID_APPLEARP
+
+
+ #define PID_APPLEARP  0xcb  /* Appletalk ARP */
+ 
+ Defined in ~ax25.h~ 
+
+:PID_IP
+^PID_IP
+
+
+ #define PID_IP        0xcc  /* ARPA Internet Protocol */
+ 
+ Defined in ~ax25.h~ 
+
+:PID_ARP
+^PID_ARP
+
+
+ #define PID_ARP       0xcd  /* ARPA Address Resolution Protocol */
+ 
+ Defined in ~ax25.h~ 
+
+:PID_RARP
+^PID_RARP
+
+
+ #define PID_RARP      0xce  /* ARPA Reverse Address Resolution Protocol */
+ 
+ Defined in ~ax25.h~ 
+
+:PID_NETROM
+^PID_NETROM
+
+
+ #define PID_NETROM    0xcf  /* NET/ROM */
+ 
+ Defined in ~ax25.h~ 
+
+:PID_NO_L3
+^PID_NO_L3
+
+
+ #define PID_NO_L3     0xf0  /* No level 3 protocol */
+ 
+ Defined in ~ax25.h~ 
+
+:PID_TEXT
+^PID_TEXT
+
+
+ #define PID_TEXT      0xf0  /* no Level 3 */
+ 
+ Defined in ~ax25.h~ 
+
+
+:AX25_LEVEL1
+  typedef struct ax25_level1 {    /* Level 1 packet */
+     int len;                    /* number of BYTEs */
+     BYTE    data[1];            /* zero or more data bytes */
+ }
+
+ 
+ Defined in ~ax25.h~ 
+
+:AX25_ADDR
+  typedef struct ax25_addr {      /* AX.25 address */
+     BYTE    call[MAXCLEN];      /* Callsign, shifted left one bit */
+     BYTE    ssid;               /* sub-station ID field */
+ }
+
+ 
+ Defined in ~ax25.h~ 
+
+:AX25_PACKET
+  typedef struct ax25_packet {
+     struct ax25_addr dest;                  /* destination           */
+     struct ax25_addr source;                /* source                */
+     struct ax25_addr digis[MAXDIGIS];       /* Digipeaters           */
+     char             repeated[MAXDIGIS];    /* has been repeated     */
+     int              ndigis;                /* number of digipeaters */
+     BYTE             cmdresp;               /* command/response bit  */
+     BYTE             cont;                  /* control BYTE          */
+     BYTE             pid;                   /* protocol ID           */
+     int              dlen;                  /* data length           */
+     BYTE             data[1];               /* data bytes            */
+ }
+
+ 
+ Defined in ~ax25.h~ 
+
+:config.h
+% FUNCTIONS:
+
+
+% DEFINES:
+
+:arp.h
+% FUNCTIONS:
+
+
+% DEFINES:
+
+    ~_ARP_H~
+    ~ARPLIFE~             900
+    ~PENDTIME~            15
+    ~ARP_QUEUE~           5
+    ~ARPLEN~              16
+    ~IPALEN~              4
+    ~MAXHWALEN~           255
+    ~ARP_REQUEST~         1
+    ~ARP_REPLY~           2
+    ~REVARP_REQUEST~      3
+    ~REVARP_REPLY~        4
+    ~ARP_NETROM~          0
+    ~ARP_ETHER~           1
+    ~ARP_EETHER~          2
+    ~ARP_AX25~            3
+    ~ARP_PRONET~          4
+    ~ARP_CHAOS~           5
+    ~ARP_IEEE802~         6
+    ~ARP_ARCNET~          7
+    ~ARP_APPLETALK~       8
+    ~NHWTYPES~            9
+    ~NULLATYPE~           (struct
+    ~ARP_PENDING~         0
+    ~ARP_VALID~           1
+    ~NULLARP~             (struct
+:_ARP_H
+^_ARP_H
+
+
+ #define	_ARP_H
+ 
+ Defined in ~arp.h~ 
+
+:ARPLIFE
+^ARPLIFE
+
+
+ #define	ARPLIFE		900	/* 15 minutes */
+ 
+ Defined in ~arp.h~ 
+
+:PENDTIME
+^PENDTIME
+
+
+ #define	PENDTIME	15	/* 15 seconds */
+ 
+ Defined in ~arp.h~ 
+
+:ARP_QUEUE
+^ARP_QUEUE
+
+
+ #define ARP_QUEUE   5   /* 5 packets max on queue */
+ 
+ Defined in ~arp.h~ 
+
+:ARPLEN
+^ARPLEN
+
+
+ #define	ARPLEN	16		/* Size of ARP hdr, minus hardware addresses */
+ 
+ Defined in ~arp.h~ 
+
+:IPALEN
+^IPALEN
+
+
+ #define	IPALEN	4		/* Length in bytes of an IP address */
+ 
+ Defined in ~arp.h~ 
+
+:MAXHWALEN
+^MAXHWALEN
+
+
+ #define	MAXHWALEN	255	/* Maximum length of a hardware address */
+ 
+ Defined in ~arp.h~ 
+
+:ARP
+:ARP_REQUEST
+^ARP_REQUEST
+
+
+ #define	ARP_REQUEST	1
+ 
+ Defined in ~arp.h~ 
+
+:ARP_REPLY
+^ARP_REPLY
+
+
+ #define	ARP_REPLY	2
+ 
+ Defined in ~arp.h~ 
+
+:REVARP_REQUEST
+^REVARP_REQUEST
+
+
+ #define	REVARP_REQUEST	3
+ 
+ Defined in ~arp.h~ 
+
+:REVARP_REPLY
+^REVARP_REPLY
+
+
+ #define	REVARP_REPLY	4
+ 
+ Defined in ~arp.h~ 
+
+
+:Hardware
+:ARP_NETROM
+^ARP_NETROM
+
+
+ #define	ARP_NETROM	0	/* Fake for NET/ROM (never actually sent) */
+ 
+ Defined in ~arp.h~ 
+
+:ARP_ETHER
+^ARP_ETHER
+
+
+ #define	ARP_ETHER	1	/* Assigned to 10 megabit Ethernet */
+ 
+ Defined in ~arp.h~ 
+
+:ARP_EETHER
+^ARP_EETHER
+
+
+ #define	ARP_EETHER	2	/* Assigned to experimental Ethernet */
+ 
+ Defined in ~arp.h~ 
+
+:ARP_AX25
+^ARP_AX25
+
+
+ #define	ARP_AX25	3	/* Assigned to AX.25 Level 2 */
+ 
+ Defined in ~arp.h~ 
+
+:ARP_PRONET
+^ARP_PRONET
+
+
+ #define	ARP_PRONET	4	/* Assigned to PROnet token ring */
+ 
+ Defined in ~arp.h~ 
+
+:ARP_CHAOS
+^ARP_CHAOS
+
+
+ #define	ARP_CHAOS	5	/* Assigned to Chaosnet */
+ 
+ Defined in ~arp.h~ 
+
+:ARP_IEEE802
+^ARP_IEEE802
+
+
+ #define	ARP_IEEE802	6	/* Who uses this? */
+ 
+ Defined in ~arp.h~ 
+
+:ARP_ARCNET
+^ARP_ARCNET
+
+
+ #define	ARP_ARCNET	7
+ 
+ Defined in ~arp.h~ 
+
+:ARP_APPLETALK
+^ARP_APPLETALK
+
+
+ #define	ARP_APPLETALK	8
+ 
+ Defined in ~arp.h~ 
+
+
+:NHWTYPES
+^NHWTYPES
+
+
+ #define	NHWTYPES 9
+ 
+ Defined in ~arp.h~ 
+
+:NULLATYPE
+^NULLATYPE
+
+
+ #define	NULLATYPE	(struct arp_type *)0
+ 
+ Defined in ~arp.h~ 
+
+:ARP_PENDING
+^ARP_PENDING
+
+
+ #define	ARP_PENDING	0
+ 
+ Defined in ~arp.h~ 
+
+:ARP_VALID
+^ARP_VALID
+
+
+ #define	ARP_VALID	1
+ 
+ Defined in ~arp.h~ 
+
+:NULLARP
+^NULLARP
+
+
+ #define	NULLARP	(struct arp_tab *)0
+ 
+ Defined in ~arp.h~ 
+
+:packmon.h
+% FUNCTIONS:
+
+
+% DEFINES:
+
+    ~FALSE~               0
+    ~TRUE~                !FALSE
+    ~VERSION~             "V1.1"
+    ~EXTERN~              extern
+    ~WORD~                unsigned
+    ~BYTE~                unsigned
+    ~uchar(x)~            ((unsigned
+    ~STREQ(x~             y)
+    ~hiword(x)~           ((int16)((x)
+    ~loword(x)~           ((int16)(x))
+    ~hibyte(x)~           ((unsigned
+    ~lobyte(x)~           ((unsigned
+    ~hinibble(x)~         (((x)
+    ~lonibble(x)~         ((x)
+    ~NETROM~
+    ~DISCONNECTED~        0
+    ~SETUP~               1
+    ~DISCONNECTPEND~      2
+    ~CONNECTED~           3
+    ~RECOVERY~            4
+    ~EOL_CR~              1
+    ~EOL_LF~              2
+    ~EOL_CRLF~            3
+    ~BINARY~              1
+    ~TEXT~                2
+:FALSE
+^FALSE
+
+
+ #define FALSE 0
+ 
+ Defined in ~packmon.h~ 
+
+:TRUE
+^TRUE
+
+
+ #define TRUE !FALSE
+ 
+ Defined in ~packmon.h~ 
+
+:VERSION
+^VERSION
+
+
+ #define VERSION "V1.1"
+ 
+ Defined in ~packmon.h~ 
+
+:EXTERN
+^EXTERN
+
+
+ #define EXTERN extern
+ 
+ Defined in ~packmon.h~ 
+
+:WORD
+^WORD
+
+
+ #define WORD unsigned int
+ 
+ Defined in ~packmon.h~ 
+
+:BYTE
+^BYTE
+
+
+ #define BYTE unsigned char
+ 
+ Defined in ~packmon.h~ 
+
+:uchar(x)
+^uchar(x)
+
+
+ #define uchar(x) ((unsigned char)(x))
+ 
+ Defined in ~packmon.h~ 
+
+:STREQ(x
+^STREQ(x
+
+
+ #define STREQ(x,y) (strcmp(x,y) == 0)
+ 
+ Defined in ~packmon.h~ 
+
+:hiword(x)
+^hiword(x)
+
+
+ #define	hiword(x)	((int16)((x) >> 16))
+ 
+ Defined in ~packmon.h~ 
+
+:loword(x)
+^loword(x)
+
+
+ #define	loword(x)	((int16)(x))
+ 
+ Defined in ~packmon.h~ 
+
+:hibyte(x)
+^hibyte(x)
+
+
+ #define	hibyte(x)	((unsigned char)((x) >> 8))
+ 
+ Defined in ~packmon.h~ 
+
+:lobyte(x)
+^lobyte(x)
+
+
+ #define	lobyte(x)	((unsigned char)(x))
+ 
+ Defined in ~packmon.h~ 
+
+:hinibble(x)
+^hinibble(x)
+
+
+ #define	hinibble(x)	(((x) >> 4) & 0xf)
+ 
+ Defined in ~packmon.h~ 
+
+:lonibble(x)
+^lonibble(x)
+
+
+ #define	lonibble(x)	((x) & 0xf)
+ 
+ Defined in ~packmon.h~ 
+
+:NETROM
+^NETROM
+
+
+ #define NETROM
+ 
+ Defined in ~packmon.h~ 
+
+:DISCONNECTED
+^DISCONNECTED
+
+
+ #define DISCONNECTED    0   /* disconnected mode */
+ 
+ Defined in ~packmon.h~ 
+
+:SETUP
+^SETUP
+
+
+ #define SETUP           1   /* link setup */
+ 
+ Defined in ~packmon.h~ 
+
+:DISCONNECTPEND
+^DISCONNECTPEND
+
+
+ #define DISCONNECTPEND  2   /* pending disconnect */
+ 
+ Defined in ~packmon.h~ 
+
+:CONNECTED
+^CONNECTED
+
+
+ #define CONNECTED       3   /* link connected */
+ 
+ Defined in ~packmon.h~ 
+
+:RECOVERY
+^RECOVERY
+
+
+ #define RECOVERY        4   /* link recovery */
+ 
+ Defined in ~packmon.h~ 
+
+:EOL_CR
+^EOL_CR
+
+
+ #define EOL_CR          1   /* lines terminate with CR */
+ 
+ Defined in ~packmon.h~ 
+
+:EOL_LF
+^EOL_LF
+
+
+ #define EOL_LF          2   /* lines terminate with LF */
+ 
+ Defined in ~packmon.h~ 
+
+:EOL_CRLF
+^EOL_CRLF
+
+
+ #define EOL_CRLF        3   /* lines terminate with CR/LF */
+ 
+ Defined in ~packmon.h~ 
+
+:BINARY
+^BINARY
+
+
+ #define BINARY          1   /* binary stream */
+ 
+ Defined in ~packmon.h~ 
+
+:TEXT
+^TEXT
+
+
+ #define TEXT            2   /* text stream */
+ 
+ Defined in ~packmon.h~ 
+
+:misc.h
+% FUNCTIONS:
+
+
+% DEFINES:
+
+:ip.h
+% FUNCTIONS:
+
+
+% DEFINES:
+
+    ~_IP_H~
+    ~IPLEN~               20
+    ~IP_MAXOPT~           40
+    ~NULLIP~              (IP
+    ~OPT_COPIED~          0x80
+    ~OPT_CLASS~           0x60
+    ~OPT_NUMBER~          0x1f
+    ~IP_EOL~              0
+    ~IP_NOOP~             1
+    ~IP_SECURITY~         2
+    ~IP_LSROUTE~          3
+    ~IP_TIMESTAMP~        4
+    ~IP_RROUTE~           7
+    ~IP_STREAMID~         8
+    ~IP_SSROUTE~          9
+    ~TS_ONLY~             0
+    ~TS_ADDRESS~          1
+    ~TS_PRESPEC~          3
+    ~RTPRIVATE~           0x1
+    ~RTTRIG~              0x2
+    ~NULLROUTE~           (struct
+    ~NULLACCESS~          (struct
+    ~NULLREASM~           (struct
+:_IP_H
+^_IP_H
+
+
+ #define	_IP_H
+ 
+ Defined in ~ip.h~ 
+
+:IPLEN
+^IPLEN
+
+
+ #define IPLEN		20	/* Length of standard IP header */
+ 
+ Defined in ~ip.h~ 
+
+:IP_MAXOPT
+^IP_MAXOPT
+
+
+ #define IP_MAXOPT	40	/* Largest option field, bytes */
+ 
+ Defined in ~ip.h~ 
+
+:IP
+  typedef struct ip {
+ 	int32 source;		/* Source address */
+ 	int32 dest;		    /* Destination address */
+ 	int16 length;		/* Total length */
+ 	int16 id;		    /* Identification */
+ 	int16 offset;		/* Fragment offset in bytes */
+ 	int16 checksum;		/* Header checksum */
+ 
+ 	struct {
+ 		char congest;	/* Congestion experienced bit (exp) */
+ 		char df;	    /* Don't fragment flag */
+ 		char mf;	    /* More Fragments flag */
+ 	} flags;
+ 
+ 	char version;		/* IP version number */
+ 	char tos;		    /* Type of service */
+ 	char ttl;		    /* Time to live */
+ 	char protocol;		/* Protocol */
+ 	char optlen;		/* Length of options field, bytes */
+ 	char options[IP_MAXOPT];/* Options field */
+ }
+
+ 
+ Defined in ~ip.h~ 
+
+:NULLIP
+^NULLIP
+
+
+ #define	NULLIP (IP *)0
+ 
+ Defined in ~ip.h~ 
+
+:OPT_COPIED
+^OPT_COPIED
+
+
+ #define	OPT_COPIED	0x80	/* Copied-on-fragmentation flag */
+ 
+ Defined in ~ip.h~ 
+
+:OPT_CLASS
+^OPT_CLASS
+
+
+ #define	OPT_CLASS	0x60	/* Option class */
+ 
+ Defined in ~ip.h~ 
+
+:OPT_NUMBER
+^OPT_NUMBER
+
+
+ #define	OPT_NUMBER	0x1f	/* Option number */
+ 
+ Defined in ~ip.h~ 
+
+:IP_EOL
+^IP_EOL
+
+
+ #define	IP_EOL		0	/* End of options list */
+ 
+ Defined in ~ip.h~ 
+
+:IP_NOOP
+^IP_NOOP
+
+
+ #define	IP_NOOP		1	/* No Operation */
+ 
+ Defined in ~ip.h~ 
+
+:IP_SECURITY
+^IP_SECURITY
+
+
+ #define	IP_SECURITY	2	/* Security parameters */
+ 
+ Defined in ~ip.h~ 
+
+:IP_LSROUTE
+^IP_LSROUTE
+
+
+ #define	IP_LSROUTE	3	/* Loose Source Routing */
+ 
+ Defined in ~ip.h~ 
+
+:IP_TIMESTAMP
+^IP_TIMESTAMP
+
+
+ #define	IP_TIMESTAMP	4	/* Internet Timestamp */
+ 
+ Defined in ~ip.h~ 
+
+:IP_RROUTE
+^IP_RROUTE
+
+
+ #define	IP_RROUTE	7	/* Record Route */
+ 
+ Defined in ~ip.h~ 
+
+:IP_STREAMID
+^IP_STREAMID
+
+
+ #define	IP_STREAMID	8	/* Stream ID */
+ 
+ Defined in ~ip.h~ 
+
+:IP_SSROUTE
+^IP_SSROUTE
+
+
+ #define	IP_SSROUTE	9	/* Strict Source Routing */
+ 
+ Defined in ~ip.h~ 
+
+:TS_ONLY
+^TS_ONLY
+
+
+ #define	TS_ONLY		0	/* Time stamps only */
+ 
+ Defined in ~ip.h~ 
+
+:TS_ADDRESS
+^TS_ADDRESS
+
+
+ #define	TS_ADDRESS	1	/* Addresses + Time stamps */
+ 
+ Defined in ~ip.h~ 
+
+:TS_PRESPEC
+^TS_PRESPEC
+
+
+ #define	TS_PRESPEC	3	/* Prespecified addresses only */
+ 
+ Defined in ~ip.h~ 
+
+:RTPRIVATE
+^RTPRIVATE
+
+
+ #define	RTPRIVATE	0x1	/* Should the world be told of this route ? */
+ 
+ Defined in ~ip.h~ 
+
+:RTTRIG
+^RTTRIG
+
+
+ #define	RTTRIG	0x2		/* Trigger is pending for this route */
+ 
+ Defined in ~ip.h~ 
+
+:NULLROUTE
+^NULLROUTE
+
+
+ #define	NULLROUTE	(struct route *)0
+ 
+ Defined in ~ip.h~ 
+
+:NULLACCESS
+^NULLACCESS
+
+
+ #define NULLACCESS	(struct rtaccess *)0
+ 
+ Defined in ~ip.h~ 
+
+:NULLREASM
+^NULLREASM
+
+
+ #define	NULLREASM	(struct reasm *)0
+ 
+ Defined in ~ip.h~ 
+
+:status.h
+% FUNCTIONS:
+
+
+% DEFINES:
+
+:heard.h
+% FUNCTIONS:
+
+
+% DEFINES:
+
+    ~MAXID~               40
+    ~MAXHEARD~            15
+    ~HEARD_DIRECT~        0x0001
+    ~HEARD_DIGI~          0x0002
+    ~HEARD_IP~            0x0004
+    ~HEARD_NETROM~        0x0008
+    ~HEARD_INFO~          0x0010
+    ~HEARD_CODE~          0x0020
+    ~HEARD_BIN~           0x0040
+    ~HEARD_ARP~           0x0080
+    ~HEARD_MAIL~          0x0100
+    ~HEARD_NOT_FOUND~     -1
+    ~HEARD_LIST_EMPTY~    -2
+    ~HEARD_LIST_FULL~     -3
+:MAXID
+^MAXID
+
+
+ #define MAXID    40     /* max length of broadcast ID */
+ 
+ Defined in ~heard.h~ 
+
+:MAXHEARD
+^MAXHEARD
+
+
+ #define MAXHEARD 15     /* maximum stations in mheard list */
+ 
+ Defined in ~heard.h~ 
+
+:MHEARD
+  typedef struct mheard {
+     struct ax25_addr    call;       /* source address           */
+     struct ax25_addr    dest;       /* destination address      */
+     time_t              time;       /* time last heard          */
+     FILE                *fptr;      /* File pointer             */
+     BYTE                s_nr;       /* Sended number            */
+     BYTE                r_nr;       /* Received number          */
+     long                count;      /* # packets rec'd          */
+     long                bytes;      /* # bytes sent             */
+     long                flags;      /* node flags               */
+     int                 frametype;  /* status of connection     */
+     WORD                crc;        /* Received CRC of packet   */
+     int                 dup;        /* Duplicate counter        */
+     BYTE                id[MAXID];  /* node ID                  */
+     char                path[80];   /* Path of station          */
+ }
+
+ 
+ Defined in ~heard.h~ 
+
+:HEARD_DIRECT
+^HEARD_DIRECT
+
+
+ #define HEARD_DIRECT   0x0001   /* heard direct             */
+ 
+ Defined in ~heard.h~ 
+
+:HEARD_DIGI
+^HEARD_DIGI
+
+
+ #define HEARD_DIGI     0x0002   /* heard digipeating        */
+ 
+ Defined in ~heard.h~ 
+
+:HEARD_IP
+^HEARD_IP
+
+
+ #define HEARD_IP       0x0004   /* heard w/ TCP/IP          */
+ 
+ Defined in ~heard.h~ 
+
+:HEARD_NETROM
+^HEARD_NETROM
+
+
+ #define HEARD_NETROM   0x0008   /* heard w/ NET/ROM         */
+ 
+ Defined in ~heard.h~ 
+
+:HEARD_INFO
+^HEARD_INFO
+
+
+ #define HEARD_INFO     0x0010   /* heard w/ any info packet */
+ 
+ Defined in ~heard.h~ 
+
+:HEARD_CODE
+^HEARD_CODE
+
+
+ #define HEARD_CODE     0x0020   /* heard coded data         */
+ 
+ Defined in ~heard.h~ 
+
+:HEARD_BIN
+^HEARD_BIN
+
+
+ #define HEARD_BIN      0x0040   /* heard #BIN#              */
+ 
+ Defined in ~heard.h~ 
+
+:HEARD_ARP
+^HEARD_ARP
+
+
+ #define HEARD_ARP      0x0080   /* heard ARP data           */
+ 
+ Defined in ~heard.h~ 
+
+:HEARD_MAIL
+^HEARD_MAIL
+
+
+ #define HEARD_MAIL     0x0100   /* Heard 'Mail for:'        */
+ 
+ Defined in ~heard.h~ 
+
+:HEARD_NOT_FOUND
+^HEARD_NOT_FOUND
+
+
+ #define HEARD_NOT_FOUND  -1
+ 
+ Defined in ~heard.h~ 
+
+:HEARD_LIST_EMPTY
+^HEARD_LIST_EMPTY
+
+
+ #define HEARD_LIST_EMPTY -2
+ 
+ Defined in ~heard.h~ 
+
+:HEARD_LIST_FULL
+^HEARD_LIST_FULL
+
+
+ #define HEARD_LIST_FULL  -3
+ 
+ Defined in ~heard.h~ 
+
+:internet.h
+% FUNCTIONS:
+
+
+% DEFINES:
+
+    ~_INTERNET_H~
+    ~ICMP_PTCL~           1
+    ~TCP_PTCL~            6
+    ~UDP_PTCL~            17
+    ~RSPF_PTCL~           73
+    ~AX25_PTCL~           93
+    ~IP_PTCL~             94
+    ~MAXTTL~              255
+    ~IP_PRECEDENCE~       0xe0
+    ~ROUTINE~             0x00
+    ~PRIORITY~            0x20
+    ~IMMEDIATE~           0x40
+    ~FLASH~               0x60
+    ~FLASH_OVER~          0x80
+    ~CRITIC~              0xa0
+    ~INET_CTL~            0xc0
+    ~NET_CTL~             0xe0
+    ~AM_ROUTINE~          0x00
+    ~AM_WELFARE~          0x20
+    ~AM_PRIORITY~         0x40
+    ~AM_EMERGENCY~        0x60
+    ~IP_COS~              0x1c
+    ~LOW_DELAY~           0x10
+    ~THROUGHPUT~          0x08
+    ~RELIABILITY~         0x04
+    ~PREC(x)~             (((x)>>5)
+    ~DELAY~               0x10
+    ~THRUPUT~             0x8
+    ~RELIABLITY~          0x4
+    ~NULLHEADER~          (struct
+:_INTERNET_H
+^_INTERNET_H
+
+
+ #define	_INTERNET_H
+ 
+ Defined in ~internet.h~ 
+
+:ICMP_PTCL
+^ICMP_PTCL
+
+
+ #define	ICMP_PTCL	1	/* Internet Control Message Protocol */
+ 
+ Defined in ~internet.h~ 
+
+:TCP_PTCL
+^TCP_PTCL
+
+
+ #define	TCP_PTCL	6	/* Transmission Control Protocol */
+ 
+ Defined in ~internet.h~ 
+
+:UDP_PTCL
+^UDP_PTCL
+
+
+ #define	UDP_PTCL	17	/* User Datagram Protocol */
+ 
+ Defined in ~internet.h~ 
+
+:RSPF_PTCL
+^RSPF_PTCL
+
+
+ #define	RSPF_PTCL	73	/* Radio Shortest Path First Protocol */
+ 
+ Defined in ~internet.h~ 
+
+:AX25_PTCL
+^AX25_PTCL
+
+
+ #define	AX25_PTCL	93	/* AX25 inside IP according to RFC-1226 */
+ 
+ Defined in ~internet.h~ 
+
+:IP_PTCL
+^IP_PTCL
+
+
+ #define	IP_PTCL		94	/* IP inside IP */
+ 
+ Defined in ~internet.h~ 
+
+:MAXTTL
+^MAXTTL
+
+
+ #define	MAXTTL		255	/* Maximum possible IP time-to-live value */
+ 
+ Defined in ~internet.h~ 
+
+:IP_PRECEDENCE
+^IP_PRECEDENCE
+
+
+ #define	IP_PRECEDENCE	0xe0	/* Mask for precedence field */
+ 
+ Defined in ~internet.h~ 
+
+:ROUTINE
+^ROUTINE
+
+
+ #define	ROUTINE		0x00
+ 
+ Defined in ~internet.h~ 
+
+:PRIORITY
+^PRIORITY
+
+
+ #define	PRIORITY	0x20
+ 
+ Defined in ~internet.h~ 
+
+:IMMEDIATE
+^IMMEDIATE
+
+
+ #define	IMMEDIATE	0x40
+ 
+ Defined in ~internet.h~ 
+
+:FLASH
+^FLASH
+
+
+ #define	FLASH		0x60
+ 
+ Defined in ~internet.h~ 
+
+:FLASH_OVER
+^FLASH_OVER
+
+
+ #define	FLASH_OVER	0x80
+ 
+ Defined in ~internet.h~ 
+
+:CRITIC
+^CRITIC
+
+
+ #define	CRITIC		0xa0
+ 
+ Defined in ~internet.h~ 
+
+:INET_CTL
+^INET_CTL
+
+
+ #define	INET_CTL	0xc0
+ 
+ Defined in ~internet.h~ 
+
+:NET_CTL
+^NET_CTL
+
+
+ #define	NET_CTL		0xe0
+ 
+ Defined in ~internet.h~ 
+
+:AM_ROUTINE
+^AM_ROUTINE
+
+
+ #define	AM_ROUTINE	0x00
+ 
+ Defined in ~internet.h~ 
+
+:AM_WELFARE
+^AM_WELFARE
+
+
+ #define	AM_WELFARE	0x20
+ 
+ Defined in ~internet.h~ 
+
+:AM_PRIORITY
+^AM_PRIORITY
+
+
+ #define	AM_PRIORITY	0x40
+ 
+ Defined in ~internet.h~ 
+
+:AM_EMERGENCY
+^AM_EMERGENCY
+
+
+ #define	AM_EMERGENCY	0x60
+ 
+ Defined in ~internet.h~ 
+
+:IP_COS
+^IP_COS
+
+
+ #define	IP_COS		0x1c	/* Mask for class-of-service bits */
+ 
+ Defined in ~internet.h~ 
+
+:LOW_DELAY
+^LOW_DELAY
+
+
+ #define	LOW_DELAY	0x10
+ 
+ Defined in ~internet.h~ 
+
+:THROUGHPUT
+^THROUGHPUT
+
+
+ #define	THROUGHPUT	0x08
+ 
+ Defined in ~internet.h~ 
+
+:RELIABILITY
+^RELIABILITY
+
+
+ #define	RELIABILITY	0x04
+ 
+ Defined in ~internet.h~ 
+
+:PREC(x)
+^PREC(x)
+
+
+ #define	PREC(x)		(((x)>>5) & 0x7)
+ 
+ Defined in ~internet.h~ 
+
+:DELAY
+^DELAY
+
+
+ #define	DELAY		0x10
+ 
+ Defined in ~internet.h~ 
+
+:THRUPUT
+^THRUPUT
+
+
+ #define	THRUPUT		0x8
+ 
+ Defined in ~internet.h~ 
+
+:RELIABLITY
+^RELIABLITY
+
+
+ #define	RELIABLITY	0x4
+ 
+ Defined in ~internet.h~ 
+
+:NULLHEADER
+^NULLHEADER
+
+
+ #define	NULLHEADER	(struct pseudo_header *)0
+ 
+ Defined in ~internet.h~ 
+
+:netrom.h
+% FUNCTIONS:
+
+
+% DEFINES:
+
+    ~NR3HLEN~             15
+    ~NR3DLEN~             241
+    ~NR3NODESIG~          0xff
+    ~NR3POLLSIG~          0xfe
+    ~NR3NODEHL~           7
+    ~NRNUMCHAINS~         17
+    ~NRRTDESTLEN~         21
+    ~NRDESTPERPACK~       11
+    ~NR4MINHDR~           5
+    ~NRPROTO_IP~          0x0c
+    ~NR4MAXINFO~          236
+    ~NR4SEQMASK~          0xff
+    ~NR4CHOKE~            0x80
+    ~NR4NAK~              0x40
+    ~NR4MORE~             0x20
+    ~NR4OPCODE~           0x0f
+    ~NR4OPPID~            0
+    ~NR4OPCONRQ~          1
+    ~NR4OPCONAK~          2
+    ~NR4OPDISRQ~          3
+    ~NR4OPDISAK~          4
+    ~NR4OPINFO~           5
+    ~NR4OPACK~            6
+    ~NR4NUMOPS~           7
+    ~NR4NUMOPS~           7
+:NR_BROADCAST
+  typedef struct nr_broadcast {   /* Net/Rom broadcast */
+     struct ax25_addr dest;      /* destination */
+     char   alias[6];            /* node identifier */
+     struct ax25_addr neighbor;  /* best neighbor */
+     BYTE   quality;             /* quality to this neighbor */
+ }
+
+ 
+ Defined in ~netrom.h~ 
+
+:NR3HLEN
+^NR3HLEN
+
+
+ #define NR3HLEN		15	    /* length of a net/rom level 3 hdr, */
+ 
+ Defined in ~netrom.h~ 
+
+:NR3DLEN
+^NR3DLEN
+
+
+ #define NR3DLEN		241	    /* max data size in net/rom l3 packet */
+ 
+ Defined in ~netrom.h~ 
+
+:NR3NODESIG
+^NR3NODESIG
+
+
+ #define NR3NODESIG	0xff	/* signature for nodes broadcast */
+ 
+ Defined in ~netrom.h~ 
+
+:NR3POLLSIG
+^NR3POLLSIG
+
+
+ #define NR3POLLSIG  0xfe    /* signature for route poll - WG7J */
+ 
+ Defined in ~netrom.h~ 
+
+:NR3NODEHL
+^NR3NODEHL
+
+
+ #define NR3NODEHL   7       /* nodes bc header length */
+ 
+ Defined in ~netrom.h~ 
+
+:NRNUMCHAINS
+^NRNUMCHAINS
+
+
+ #define NRNUMCHAINS	17	    /* number of chains in the */
+ 
+ Defined in ~netrom.h~ 
+
+:NRRTDESTLEN
+^NRRTDESTLEN
+
+
+ #define NRRTDESTLEN	21	    /* length of destination entry in */
+ 
+ Defined in ~netrom.h~ 
+
+:NRDESTPERPACK
+^NRDESTPERPACK
+
+
+ #define NRDESTPERPACK	11	/* maximum number of destinations per */
+ 
+ Defined in ~netrom.h~ 
+
+:NR4MINHDR
+^NR4MINHDR
+
+
+ #define	NR4MINHDR	5
+ 
+ Defined in ~netrom.h~ 
+
+:NRPROTO_IP
+^NRPROTO_IP
+
+
+ #define NRPROTO_IP	0x0c
+ 
+ Defined in ~netrom.h~ 
+
+:NR4MAXINFO
+^NR4MAXINFO
+
+
+ #define	NR4MAXINFO	236		/* maximum data in an info packet */
+ 
+ Defined in ~netrom.h~ 
+
+:NR4SEQMASK
+^NR4SEQMASK
+
+
+ #define NR4SEQMASK	0xff	/* eight-bit sequence numbers */
+ 
+ Defined in ~netrom.h~ 
+
+:NR4CHOKE
+^NR4CHOKE
+
+
+ #define	NR4CHOKE	0x80
+ 
+ Defined in ~netrom.h~ 
+
+:NR4NAK
+^NR4NAK
+
+
+ #define	NR4NAK		0x40
+ 
+ Defined in ~netrom.h~ 
+
+:NR4MORE
+^NR4MORE
+
+
+ #define	NR4MORE		0x20	/* The "more follows" flag for */
+ 
+ Defined in ~netrom.h~ 
+
+:NR4OPCODE
+^NR4OPCODE
+
+
+ #define	NR4OPCODE	0x0f
+ 
+ Defined in ~netrom.h~ 
+
+:NR4OPPID
+^NR4OPPID
+
+
+ #define NR4OPPID	0		/* protocol ID extension to network layer */
+ 
+ Defined in ~netrom.h~ 
+
+:NR4OPCONRQ
+^NR4OPCONRQ
+
+
+ #define	NR4OPCONRQ	1		/* connect request */
+ 
+ Defined in ~netrom.h~ 
+
+:NR4OPCONAK
+^NR4OPCONAK
+
+
+ #define	NR4OPCONAK	2		/* connect acknowledge */
+ 
+ Defined in ~netrom.h~ 
+
+:NR4OPDISRQ
+^NR4OPDISRQ
+
+
+ #define	NR4OPDISRQ	3		/* disconnect request */
+ 
+ Defined in ~netrom.h~ 
+
+:NR4OPDISAK
+^NR4OPDISAK
+
+
+ #define	NR4OPDISAK	4		/* disconnect acknowledge */
+ 
+ Defined in ~netrom.h~ 
+
+:NR4OPINFO
+^NR4OPINFO
+
+
+ #define	NR4OPINFO	5		/* information packet */
+ 
+ Defined in ~netrom.h~ 
+
+:NR4OPACK
+^NR4OPACK
+
+
+ #define	NR4OPACK	6		/* information ACK */
+ 
+ Defined in ~netrom.h~ 
+
+:NR4NUMOPS
+^NR4NUMOPS
+
+
+ #define NR4NUMOPS	7		/* number of transport opcodes */
+ 
+ Defined in ~netrom.h~ 
+
+:NR4NUMOPS
+^NR4NUMOPS
+
+
+ #define NR4NUMOPS	7		/* number of transport opcodes */
+ 
+ Defined in ~netrom.h~ 
+
+:buf.h
+% FUNCTIONS:
+
+
+% DEFINES:
+
+    ~_BUF_H~
+    ~uchar(x)~            ((unsigned
+    ~PULLCHAR(bpp)~
+:_BUF_H
+^_BUF_H
+
+
+ #define	_BUF_H
+ 
+ Defined in ~buf.h~ 
+
+:typedef
+ typedef unsigned char int8;
+
+ 
+ Defined in ~buf.h~ 
+
+:typedef
+ typedef unsigned int  int16;
+
+ 
+ Defined in ~buf.h~ 
+
+:typedef
+ typedef unsigned long int32;
+
+ 
+ Defined in ~buf.h~ 
+
+:uchar(x)
+^uchar(x)
+
+
+ #define	uchar(x) ((unsigned char)(x))
+ 
+ Defined in ~buf.h~ 
+
+:MBUF
+  typedef struct mbuf {
+   int16 len;                 /* Actual number of bytes in buffer */
+   int16 cnt;                 /* Number of bytes remaining        */
+   unsigned char *dptr;       /* Actual buffer pointer            */
+   unsigned char data[280];   /* 280 to be save                   */
+ }
+
+ 
+ Defined in ~buf.h~ 
+
+:PULLCHAR(bpp)\
+^PULLCHAR(bpp)\
+
+ #define	PULLCHAR(bpp)\
+  ((bpp) != NULL && bpp->cnt > 1 ? \
+  (bpp->cnt--,(unsigned char)bpp->data++) : pullchar(bpp))
+ 
+ Defined in ~buf.h~ 
+

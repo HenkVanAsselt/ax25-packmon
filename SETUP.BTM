@@ -1,0 +1,6 @@
+@echo off
+
+: ----- ALIASES
+
+ALIAS db = `cv /2 /D /W "/C<input.fil" packmon.exe`
+ALIAS packmon = `mode mono ^ mode co80 ^vga 132x43 ^ *packmon`

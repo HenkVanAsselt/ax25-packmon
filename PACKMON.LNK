@@ -1,0 +1,8 @@
+packmon.obj isr.obj + crc.obj + key.obj + help.obj +
+ax25.obj ax25subr.obj ax25dump.obj + iphdr.obj +
+log.obj heard.obj buf.obj misc.obj +
+netdump.obj arpdump.obj config.obj status.obj
+packmon.exe /SE:200 /ST:20000 /CO /M
+packmon.map
+hva_util.lib window.lib
+nul.def

@@ -1,0 +1,26 @@
+
+
+		** CLint V1.62 ** #190315 from R&D Associates.
+
+Register today at a cost of just US$35, or œ19. We will send you the latest
+version which includes:  an invaluable complexity  analysis,  an  automatic
+prototyping facility,  assistance with porting pre-ANSI code; together with
+a  printed  manual  and  technical  support.  Remember,  only  registration
+entitles you to low cost upgrades and support.  Please  specify  your  disc
+size  (3.5,  5.25).  We accept checks drawn on any bank,  or  Money Orders.
+Postage and packing extra outside the US: US$5, or outside the UK: œ8
+
+Contact R&D Associates at:
+    356 D. W. Highway Suite #232, Merrimack, NH 03054, USA
+or
+    16 High Street, Rainham, Kent, ME8 7JE, ENGLAND
+
+packmon.c:
+e:\include\stdlib.h: 138				e:\include\hva_util.h: 213				packmon.c: 56				Error packmon.c(99): 'NULL' undefined in function main
+  Warning packmon.c(99): non-portable pointer conversion in function main
+  Warning packmon.c(133): non-portable pointer conversion in function main
+  Warning packmon.c(137): degenerate unsigned comparison in function main
+  Warning packmon.c(141): non-portable pointer conversion in function main
+  Warning packmon.c(147): non-portable pointer conversion in function main
+Available memory 393215			
+CLint: can't find source '\s.c'

@@ -1,0 +1,121 @@
+: -----------------------------
+: Packmon Development BTM
+: -----------------------------
+
+@echo off
+
+: ----- Load keystack and suppress info
+kstack > NUL
+
+: ----- Set global variables
+SET PACKMON=F:\PACKMON
+SET TNOS=F:\TNOS\SRC
+SET PMP=F:\PACKMON\PMP
+
+:------ Generate file lists
+REM FOR %f IN (%PACKMON\*.*) DO ECHO %@Filename[%f]  %@Descript[%f] >> Packmon.lis
+
+: --- Clear screen and print text
+@ECHO OFF
+
+:start
+CLS Black ON White
+
+: ------ Show menu
+
+:show
+Drawbox 0 0 24 79 2 Black On White FILL White
+
+Drawbox 0 0 2 79 2 Black On White
+Scrput  1 3 Blue  On White Packmon Development Menu
+
+SCREEN   4  6
+Scrput  +1  +0 BLACK ON WHITE    E   Edit Packmon source file
+Scrput  +2  +0 BLACK ON WHITE    T   Edit TNOS source file
+Scrput  +3  +0 BLACK ON WHITE    P   Edit PMP source file
+Scrput  +4  +0 Black ON White    B   Resume Edit
+
+Scrput  +6  +0 BLACK ON WHITE    K   Find keyword in TNOS Source
+
+Scrput  +8  +0 BLACK ON WHITE    M   Makeit
+Scrput  +9  +0 BLACK ON WHITE    R   Run Packmon
+Scrput  +10 +0 BLACK ON WHITE    L   List Packmon.log
+
+: ----- Ask for a reaction
+:ask
+SCREEN 19 2
+SET choise=Q
+INKEY Give your choise: %%choise
+
+: ----- React on given input
+
+iff "%choise"=="E" then
+  GOSUB Getmask
+  dir /B %PACKMON\%mask > tmp.lis
+  set File=%@select[tmp.lis,3,50,22,75,"Files"]
+  iff "%File" != "" then
+    b %File
+  endiff
+
+elseiff "%choise"=="T" then
+  GOSUB Getmask
+  dir /B %TNOS\%mask > tmp.lis
+  set File=%@select[tmp.lis,3,50,22,75,"TNOS Source files"]
+  iff "%File" != "" then
+    b %TNOS\%File
+  endiff
+
+
+elseiff "%choise"=="P" then
+  GOSUB Getmask
+  dir /B %PMP\%mask > tmp.lis
+  set File=%@select[tmp.lis,3,50,22,75,"PMP Source files"]
+  iff "%File" != "" then
+    b PMP\%File
+  endiff
+
+elseiff "%choise"=="K" then
+  SCREEN 20 2
+  INPUT /C /E Give keyword: %%key
+  SCRPUT 21 2 BLINK Red ON White Searching...
+  grep -io %key %TNOS\*.c > tmp.lis
+  set File=%@WORD[0,%@select[tmp.lis,3,30,22,75,"PMP Source files"]]
+  iff "%File" != "" then
+    b %File
+  endiff
+
+elseiff "%choise"=="M" then
+  cls
+  CALL makeit
+  cls
+
+elseiff "%choise"=="R" then
+  CALL packmon
+
+elseiff "%choise"=="L" then
+  LIST packmon.log
+
+elseiff "%choise"=="B" then
+  B
+
+endiff
+
+if "%choise"=="Q" goto end
+
+: ----- Ask for next choise
+goto show
+
+: ----- End of BTM file
+:end
+cls black on white
+QUIT
+
+: *******************************************
+:            SUBROUTINES
+: *******************************************
+
+:Getmask
+  SCREEN 21 2
+  INPUT /C /E Give Mask: %%mask
+RETURN
+

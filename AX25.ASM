@@ -1,0 +1,2873 @@
+PAGE 72,132
+
+;**************************************************************************
+;AX25 packet driver for RS232 port by Pawel Jalocha
+;version of 30th August 1992
+
+;The purpose of this piece of software is to provide interface
+;between hardware (BAYCOM-like modem) and software (NOS).
+
+;Driver's calling convention conforms to "FTP packet driver specification"
+
+;To make ax25.com from ax25.asm execute two commands:
+;    tasm ax25
+;    tlink /t ax25
+
+;Free license for this software is herein granted for all radio _amateurs_
+;Commercial usage in whole or part is prohibited.
+
+;Questions may be addressed to:
+;   email:  jalocha@chopin.ifj.edu.pl
+;   or  jalocha@vxcern.cern.ch
+;   packet: SR9VRC@SP9ZDN.POL.EU (untested)
+;**********************************************************************
+
+
+
+
+CL_AX25 equ 9                   ; Driver class
+
+code    segment word public
+    assume  cs:code, ds:code
+
+    org 2ch
+phd_environ dw ?
+
+;--------------------------------------------------
+; Install COM file as terminate and stay resident
+;--------------------------------------------------
+    org 100h
+start:  jmp install_driver
+
+        even
+;#+data
+;--------------------
+;primary parameters
+;--------------------
+packet_int_no   db 60h  ;software interrupt
+com_irq         db 3    ;COM port IRQ
+com_base        dw 2f8h ;COM port base
+bit_rate        dw 1200 ;bps
+tx_head         dw 480  ;transmition header length in bits
+tx_tail         dw 24   ;transmition tail length in bits
+slot_time       db 120  ;slot time for carrier sensing in bits
+persistance     db 64   ;p-persistence
+carrier_sense   db 2    ;carrier sensing
+                        ;0 - don't care - just transmit (full duplex)
+                        ;1 - sense DCD line
+                        ;2 - sense data transitions (BAYCOM-like)
+                        ;3 - deliver from data analysis
+
+;------------------------------------------------
+;secondary parameters computed from primary ones
+;------------------------------------------------
+irq_mask        db 0    ;IRQ mask for 8259
+cl_bit_len      dw 0    ;bit len in system clock (8253/4) ticks
+cl_bit_len_2    dw 0    ;half bit len in clock ticks
+bd_slot_time    dw 0    ;slot time in baud generator ticks / 8
+bd_bit_len      db 0    ;bit len in baud generator ticks / 8
+
+driver_name db 'AX25 driver for BAYCOM-like modem',0
+
+ even
+old_packet_int  dw 0,0
+receive_upcall  dw 0,0
+;#-data
+
+
+;==============================================================
+;Service routine for software interrupt to control the driver
+;==============================================================
+
+;#+data
+;---------------------------
+;Packet Driver Error numbers
+;---------------------------
+NO_ERROR        equ 0   ;no error at all.
+BAD_HANDLE      equ 1   ;invalid handle number
+NO_CLASS        equ 2   ;no interfaces of specified class found
+NO_TYPE         equ 3   ;no interfaces of specified type found
+NO_NUMBER       equ 4   ;no interfaces of specified number found
+BAD_TYPE        equ 5   ;bad packet type specified
+NO_MULTICAST    equ 6   ;this interface does not support multicast
+CANT_TERMINATE  equ 7   ;this packet driver cannot terminate
+BAD_MODE        equ 8   ;an invalid receiver mode was specified
+NO_SPACE        equ 9   ;operation failed because of insufficient space
+TYPE_INUSE      equ 10  ;the type had previously been accessed, and not released.
+BAD_COMMAND     equ 11  ;the command was out of range, or not implemented
+CANT_SEND       equ 12  ;the packet couldn't be sent (usually hardware error)
+CANT_SET        equ 13  ;hardware address couldn't be changed (more than 1 handle open)
+BAD_ADDRESS     equ 14  ;hardware address has bad length or format
+CANT_RESET      equ 15  ;Couldn't reset interface (more than 1 handle open).
+BAD_IOCB        equ 16  ;an invalid iocb was specified
+;#-data
+
+;----------------------------------
+; stack offsets of incoming regs
+;----------------------------------
+regs_w  struc
+_ES dw  ?
+_DS dw  ?
+_BP dw  ?
+_DI dw  ?
+_SI dw  ?
+_DX dw  ?
+_CX dw  ?
+_BX dw  ?
+_AX dw  ?
+_IP dw  ?
+_CS dw  ?
+_F  dw  ?           ; flags, Carry flag is bit 0
+regs_w  ends
+
+CY  equ 0001h
+EI  equ 0200h
+
+;--------------------------------
+; stack offsets of incoming regs
+;--------------------------------
+regs_b  struc
+    dw  ?           ; es, ds, bp, di, si are 16 bits
+    dw  ?
+    dw  ?
+    dw  ?
+    dw  ?
+_DL db  ?
+_DH db  ?
+_CL db  ?
+_CH db  ?
+_BL db  ?
+_BH db  ?
+_AL db  ?
+_AH db  ?
+regs_b  ends
+
+;-------------------------------------
+;service interrupt vector points here
+;-------------------------------------
+DRVR_ISR:
+    jmp exec_command
+    db 'PKT DRVR',0
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: exec_command()
+;     PURPOSE: packet driver command executor
+;      SYNTAX:
+; DESCRIPTION:
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+exec_command:           ;packet driver command executor
+    sti                 ;don't lock interrupts
+    push ax             ;save registers on stack
+    push bx
+    push cx
+    push dx
+    push si
+    push di
+    push bp
+    push ds
+    push es
+    mov  bp,sp          ;bp=sp so we can address pushed registers
+    and _F[bp],not CY   ;Clear carry on exit
+    mov bx,cs           ;make ds=cs
+    mov ds,bx
+    mov bl,ah           ;execute command given by ah
+    mov bh,0
+    cmp bx,26           ; Check if not above upper command nr limit
+    jnc f_above_25
+    add bx,bx           ; Goto word boundary
+    call [functions+bx] ; performa function
+
+DRVR_ISR_return:
+    mov _DH[bp],dh      ;pass dh now to dh on exit
+    sbb ax,ax
+    and ax,CY
+    or _F[bp],ax        ;pass carry now to carry on exit
+
+    pop es              ;Restore registers
+    pop ds              ;and return from interrupt
+    pop bp
+    pop di
+    pop si
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    iret
+
+f_above_25:                  ;Function was above max function number
+    call f_not_implemented
+    jmp DRVR_ISR_return
+
+
+;#+data
+;------------------------------------------------------------------
+; Table of functions, implemented by this driver
+;------------------------------------------------------------------
+even
+functions   label   word
+    dw  f_not_implemented       ;0
+    dw  f_driver_info           ;1
+    dw  f_access_type           ;2
+    dw  f_release_type          ;3
+    dw  f_send_pkt              ;4
+    dw  f_terminate             ;5
+    dw  f_get_address           ;6      Not implemented
+    dw  f_reset_interface       ;7      Not implemented
+    dw  f_stop                  ;8
+    dw  f_not_implemented       ;9
+    dw  f_get_parameters        ;10     Not implemented
+    dw  f_not_implemented       ;11
+    dw  f_as_send_pkt           ;12     Not implemented
+    dw  f_drop_pkt              ;13     Not implemented
+    dw  f_not_implemented       ;14
+    dw  f_not_implemented       ;15
+    dw  f_not_implemented       ;16
+    dw  f_not_implemented       ;17
+    dw  f_not_implemented       ;18
+    dw  f_not_implemented       ;19
+    dw  f_set_rcv_mode          ;20     Not implemented
+    dw  f_get_rcv_mode          ;21     Not implemented
+    dw  f_set_multicast_list    ;22     Not implemented
+    dw  f_get_multicast_list    ;23     Not implemented
+    dw  f_get_statistics        ;24
+    dw  f_set_address           ;25
+;#-data
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: f_not_implemented()
+;     PURPOSE: Called when driver is called with a function number,
+;              not implemented in this driver
+;      SYNTAX:
+; DESCRIPTION:
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+f_not_implemented:      ;non-implemented functions jump here
+    stc                 ;set carry to indicate an error
+    mov dh,BAD_COMMAND  ;error code = BAD_COMMAND
+    ret
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: f_driver_info()
+;     PURPOSE: Driver function 1
+;              Giver driver information
+;      SYNTAX:
+; DESCRIPTION:
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+f_driver_info:
+    mov _CH[bp],CL_AX25     ;driver class
+    mov _AL[bp],1           ;basic flag
+    mov _DX[bp],0           ;driver type
+    mov _CL[bp],0           ;driver number
+    mov _BX[bp],0           ;driver version
+    mov _DS[bp],ds          ;driver name pointer
+    mov _SI[bp],offset driver_name
+    mov dh,NO_ERROR
+    clc
+    ret
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: f_access_type()
+;     PURPOSE: Driver function 2
+;              Give access type
+;      SYNTAX:
+; DESCRIPTION:
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+f_access_type:
+    mov bx,_BX[bp]
+    cmp al,CL_AX25          ;our class ?
+    jnz wrong_class         ; no
+    cmp bx,0FFFFh           ;generic type ?
+    jz type_OK              ; yes
+    cmp bx,0                ;our type ?
+    jnz wrong_type          ; no
+
+type_OK:
+    cmp dl,0                ;generic num ?
+    jnz wrong_num
+    mov ax,receive_upcall   ;check if handle busy
+    or ax,receive_upcall+2
+    jnz busy_handle
+    mov receive_upcall,di   ;store receiver upcall
+    mov ax,es
+    mov receive_upcall+2,ax
+    mov _AX[bp],0           ;return handle=0
+    clc
+    mov dh,NO_ERROR
+    ret
+
+wrong_class:                ; Access type of wrong class
+    stc
+    mov dh,NO_CLASS
+    ret
+
+wrong_type:                 ; Access type of wrong type
+    stc
+    mov dh,NO_TYPE
+    ret
+
+wrong_num:                  ; Access type has wrong number
+    stc
+    mov dh,NO_NUMBER
+    ret
+
+busy_handle:                ; Handle is already busy
+    stc
+    mov dh,TYPE_INUSE
+    ret
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: f_stop
+;     PURPOSE: Driver function 7
+;      SYNTAX:
+; DESCRIPTION:
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+f_stop: jmp clear_upcall
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: f_release_type
+;     PURPOSE: Driver function 3
+;      SYNTAX:
+; DESCRIPTION:
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+f_release_type:
+
+    cmp _BX[bp],0           ;handle=0 ?
+    jnz wrong_handle
+    mov ax,receive_upcall   ;is receiver upcall defined ?
+    or ax,receive_upcall+2
+    jz wrong_handle         ;jump if not
+
+clear_upcall:
+    xor ax,ax               ;clear receiver upcall
+    mov receive_upcall,ax
+    mov receive_upcall+2,ax
+    clc
+    mov dh,NO_ERROR
+    ret
+
+wrong_handle:               ;Receiver upcall was not defined
+    stc
+    mov dh,BAD_HANDLE
+    ret
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: f_send_pkt
+;     PURPOSE: Driver function 4
+;      SYNTAX: _DS:si =data
+;              cx     =length
+;              es:si  =packet address,
+;              cx     =packet length
+; DESCRIPTION:
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+f_send_pkt:
+    mov es,_DS[bp]
+    mov bx,cx                   ;save packet length
+    mov ah,7Eh                  ;starting HDLC flag
+    call AddTxByteDirect
+    jc PacketTooBig
+    mov dx,0FFFFh               ;initialize CRC
+AddNextByte:
+      mov ah,es:[si]
+      inc si
+      call CRCpass              ;pass through CRC
+      call AddTxByteStuffing
+      jc PacketTooBig
+    loop AddNextByte
+    not dx                      ;complete CRC computation by inverting all bits
+    mov ax,dx                   ;append CRC
+    xchg al,ah                  ;lower byte first
+    call AddTxByteStuffing
+    jc PacketTooBig
+    xchg al,ah                  ;higher byte now
+    call AddTxByteStuffing
+    jc PacketTooBig
+    mov ah,7Eh                  ;add ending HDLC flag
+    call AddTxByteDirect
+    jc PacketTooBig
+    call TxFlush8bit
+    jz PacketTooBig
+
+    call ValidateTxBlock        ;make the packet we just put into buffer
+                                ;valid for transmition
+
+    mov ax,bx                   ;increment bytes_out counter
+    mov bx,offset bytes_out     ;note that we still had the packet length in bx
+    call inc_dword_bx_by_ax
+
+    mov bx,offset packets_out   ;increment packet_out counter
+    call inc_dword_bx
+
+    clc
+    mov dh,NO_ERROR
+    ret
+
+PacketTooBig:
+    call TxFlush8bit
+    call CancelTxBlock          ;cancel the block we were writing
+                                ;into Tx buffer
+    mov bx,offset errors_out    ;increment errors_out counter
+    call inc_dword_bx
+
+    stc
+    mov dh,CANT_SEND
+    ret
+
+;Note that packets_out/bytes_out counts data sent by application
+;that is _not_ the data transmitted from the buffer.
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: f_terminate()
+;     PURPOSE: Terminate this program
+;              Driver function 5
+;      SYNTAX:
+; DESCRIPTION:
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+f_terminate:
+    call deinstall_driver
+    clc
+    mov dh,NO_ERROR
+    ret
+
+
+;--------------------------------------------------------------
+; Other functions, not implemented in this driver
+;--------------------------------------------------------------
+f_get_address:          jmp f_not_implemented  ; function 6
+f_reset_interface:      jmp f_not_implemented  ; function 7
+f_get_parameters:       jmp f_not_implemented  ; function 10
+f_as_send_pkt:          jmp f_not_implemented  ; function 12
+f_drop_pkt:             jmp f_not_implemented  ; function 13
+f_set_rcv_mode:         jmp f_not_implemented  ; function 20
+f_get_rcv_mode:         jmp f_not_implemented  ; function 21
+f_set_multicast_list:   jmp f_not_implemented  ; function 23
+f_get_multicast_list:   jmp f_not_implemented  ; function 24
+
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: f_get_statistics
+;     PURPOSE: Driver function
+;      SYNTAX:
+; DESCRIPTION:
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+f_get_statistics:
+    mov _DS[bp],ds
+    mov _SI[bp],offset statistics_list
+    clc
+    mov dh,NO_ERROR
+    ret
+;--#+func----------------------------------------------------------------
+;    FUNCTION: f_set_address
+;     PURPOSE:
+;      SYNTAX:
+; DESCRIPTION: This function is not implemented
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+f_set_address:      jmp f_not_implemented
+
+;#+data
+;-----------------------
+; Statistics structure
+;-----------------------
+        even
+statistics_list label   dword   ;statistics structure
+packets_in  dw  0,0             ;as in packet driver specification
+packets_out dw  0,0
+bytes_in    dw  0,0
+bytes_out   dw  0,0
+errors_in   dw  0,0
+errors_out  dw  0,0
+packets_dropped dw  0,0
+;extended statistics
+;PTT_pushes dw  0,0
+;HDLC_flags dw  0,0
+;frame_aborts   dw  0,0
+;short_packets  dw  0,0 ;count valid but too short packets
+;#-data
+
+
+;Simple routines to increment double words
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: inc_dword_bx_by_ax()
+;     PURPOSE: increments dword ds:[bx] by ax
+;      SYNTAX:
+; DESCRIPTION:
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+inc_dword_bx_by_ax:
+    add word ptr [bx],ax
+    inc bx
+    inc bx
+    adc word ptr [bx],0
+    dec bx
+    dec bx
+    ret
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: inc_dword_bx
+;     PURPOSE: increments dword ds:[bx] by 1
+;      SYNTAX:
+; DESCRIPTION:
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+inc_dword_bx:
+    add word ptr [bx],1
+    inc bx
+    inc bx
+    adc word ptr [bx],0
+    dec bx
+    dec bx
+    ret
+
+;*************************************************************************
+;
+;       TIMER ROUTINES
+;
+;*************************************************************************
+
+;#+data
+        even
+OldTimerISR dw 0,0
+TimerISRActive  db 0
+;#+data
+
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: Initialize_Timer
+;     PURPOSE: Save current timer ISR vector
+;              set vector to our 'Timer_ISR' routine
+;      SYNTAX:
+; DESCRIPTION:
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+Initialize_Timer:
+
+    ;--------------------
+    ; Initialize
+    ;--------------------
+    pushf
+    push ax
+    push dx
+    cli
+
+    ;------------------------------------
+    ; Save vector to original Timer ISR
+    ;------------------------------------
+    push es
+    push bx
+    mov al,8        ;save Timer interrupt vector
+    mov ah,35h
+    int 21h
+    mov OldTimerISR,bx
+    mov ax,es
+    mov OldTimerISR+2,ax
+    pop bx
+    pop es
+
+    ;--------------------------------
+    ; Set new vector to our Time ISR
+    ;--------------------------------
+    mov al,8        ;set new vector
+    mov ah,25h
+    mov dx,offset Timer_ISR
+    int 21h
+
+    ;--------------------
+    ; Return from routine
+    ;--------------------
+    pop dx
+    pop ax
+    popf
+    ret
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: Restore_timer
+;     PURPOSE: Restore vector to original timer ISR
+;      SYNTAX:
+; DESCRIPTION:
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+Restore_Timer:
+
+    ;--------------------
+    ; Initialize
+    ;--------------------
+    pushf
+    push ax
+    push dx
+    cli
+
+    ;---------------------------------------
+    ; Restore vector to original Timer ISR
+    ;---------------------------------------
+    push ds
+    mov al,8        ;restore interrupt vector
+    mov ah,25h
+    lds dx,dword ptr OldTimerISR
+    int 21h
+    pop ds
+
+    ;---------------------
+    ; Return from routine
+    ;---------------------
+    pop dx
+    pop ax
+    popf
+    ret
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: Timer_ISR
+;     PURPOSE: Timer Interrupt Service Routine (Vector 8)
+;      SYNTAX:
+; DESCRIPTION:
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+Timer_ISR:
+
+    ;sti                    ;shall we enable interrupts already here ?
+
+    pushf                   ;first call the old routine
+    call dword ptr cs:[OldTimerISR]
+
+    push ax                 ; Save registers
+    push bx
+    push cx
+    push dx
+    push ds
+
+    mov ax,cs               ;make ds=cs
+    mov ds,ax
+
+    mov al,TimerISRActive   ;check for possible recursive call
+    and al,al
+    jnz TimerISR_already_Active ;jump if it is so
+
+    mov al,0FFh             ;mark Timer ISR as really active
+    mov TimerISRActive,al
+    sti                     ;enable interrupts so Tx and Rx can run
+                            ;while we process data collected by Rx
+
+ReadNextRxPeriod:
+    call ReadRxPeriod       ;read next Rx period into ax
+    jnc TimerISR_end        ;jump if buffer empty
+    call ProcessPeriod      ;here we process the period
+    jmp ReadNextRxPeriod    ;loop
+
+TimerISR_end:
+    xor al,al
+    mov TimerISRActive,al
+
+TimerISR_already_active:
+    pop ds
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    iret
+
+;#+data
+;------------------------------------------------------------------
+;
+;------------------------------------------------------------------
+MaxFrameLen equ 2050                    ;maximum frame length in bytes
+ even
+RxFrameData     db  MaxFrameLen dup(0)  ;frame buffer
+RxFrameLen      dw  0                   ;actual frame length (counts bytes)
+RxBitCount      db  0                   ;count single data bits
+RxFrameValid    db  0                   ;non-zero if frame is valid
+SamplePhase     dw  0                   ;time to next sampling point
+SampleLevel     dw  0
+RxByteReg       db  0
+RxStuffing      db  0
+RxShiftReg      db  0
+;#+data
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: ProcessPeriod()
+;     PURPOSE:
+;      SYNTAX: in: ax = period
+; DESCRIPTION:
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+ProcessPeriod:          ;on input ax=period
+    mov cx,SampleLevel  ;bit 0,cl=level, bit 0,ch=previous level
+    xor cl,1            ;flip level
+    mov dx,SamplePhase  ;dx=time to next sample
+MoveSampling:
+      cmp ax,dx         ;compare SamplePhase with period
+      jc PeriodLower    ;jump if Period lower
+      sub ax,dx         ;subtract SamplePhase from period
+      xor ch,cl         ;xor level with previous level
+      call NewRxBit     ;analyze bit in bit 0,ch
+      mov ch,cl         ;previous level = level
+      mov dx,cl_bit_len ;load SamplePhase with bit length
+      jmp MoveSampling  ;loop
+PeriodLower:
+    sub dx,ax           ;subtract period form SamplePhase
+    mov SampleLevel,cx  ;save SampleLevel
+                        ;rather primitive DPLL
+    mov ax,cl_bit_len_2 ;load half bit period
+    sub ax,dx           ;subtract SamplePhase
+                        ;now: dx=SamplePhase, ax=phase error
+    mov cl,2            ;divide the error by 4
+    sar ax,cl
+    add dx,ax           ;add correction to SamplePhase
+    mov SamplePhase,dx  ;save SamplePhase
+    ret
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: NewRxbit
+;     PURPOSE: Analyze bit in 0,ch
+;      SYNTAX:
+; DESCRIPTION:
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+NewRxBit:               ;bit 0,ch = _inverted_ data bit to
+                        ;append to the frame
+                        ;ax,cx,dx must not be modified
+    push ax
+    push cx
+    push dx
+    mov al,RxShiftReg       ;load shift reg.
+    shl al,1                ;append data bit (which is still inverted)
+    or al,ch
+    mov RxShiftReg,al       ;save shift reg.
+    cmp al,81h              ;check for HDLC flag (01111110 pattern)
+    jz RxFoundFlag          ;jump if so
+    test al,7Fh             ;check for invalid frame (7 1s in a row)
+    jz RxFrameInvalid       ;jump if so
+
+    mov al,RxFrameValid     ;is frame still valid ?
+    and al,al
+    jz NewRxBit_ret         ;jump if so
+    xor ch,1                ;invert bit to append (it was inverted at entry)
+    mov al,RxByteReg        ;load byte reg.
+    mov ah,RxBitCount
+    and ch,1                ;zero to append ?
+    jz AppendZeroBit
+    ror ch,1                ;carry=data bit (must be 1 here...)
+    rcr al,1                ;append data bit to byte buffer
+    inc ah                  ;increase bit counter
+    inc RxStuffing          ;increase stuffing flag
+    jmp CheckBitCount
+AppendZeroBit:
+    xor cl,cl
+    mov ch,RxStuffing       ;check for stuffing
+    cmp ch,5
+    mov RxStuffing,cl       ;clear stuffing flag
+    jz NewRxBit_ret         ;avoid adding zero bit
+      shr al,1              ;append zero bit
+      inc ah
+CheckBitCount:
+    mov RxByteReg,al        ;save byte reg.
+    mov RxBitCount,ah       ;save bit counter
+    test ah,07h             ;check for byte boundary
+    jnz NewRxBit_ret
+      mov bx,RxFrameLen     ;load frame length
+      cmp bx,MaxFrameLen    ;check frame size
+      jnc RxFrameInvalid    ;jump if frame would exceed max. length
+      mov [RxFrameData+bx],al
+      inc bx
+      mov RxFrameLen,bx     ;save new frame length
+NewRxBit_ret:
+    pop dx
+    pop cx
+    pop ax
+    ret
+RxFrameInvalid:
+    xor al,al
+    mov RxFrameValid,al
+    jmp NewRxBit_ret
+RxFoundFlag:
+    mov al,RxFrameValid ;frame valid ?
+    and al,al
+    jz PrepareNewFrame  ;jump if not valid
+    mov al,RxBitCount   ;check bit count
+    inc al
+    test al,07h         ;check if multiply of 8
+    jnz PrepareNewFrame ;jump if not
+    mov cx,RxFrameLen   ;check frame length
+    cmp cx,17
+    jc PrepareNewFrame  ;jump if length less then 17 bytes
+    mov dx,0FFFFh       ;initialize CRC
+    mov bx,offset RxFrameData      ;pass all frame bytes through CRC except last two
+    sub cx,2            ;decrease length by 2
+PassNextRxbyte:
+      mov ah,[bx]       ;load next byte
+      inc bx
+      call CRCpass      ;pass it through CRC
+    loop PassNextRxByte
+    not dx              ;negate CRC
+    cmp dl,[bx]         ;check lower CRC byte
+    jnz BadCRCFrame     ;jump if bad
+    inc bx
+    cmp dh,[bx]         ;check high CRC byte
+    jnz BadCRCFrame     ;jump if bad
+
+;Frame is OK !!! - do the upcall to the application layer.
+    call DoUpCall
+
+PrepareNewFrame:
+    xor ax,ax       ;null frame lemgth
+    mov RxFrameLen,ax
+    mov RxBitCount,al   ;null bit count
+    mov RxStuffing,al   ;initialize bit stuffing
+    mov al,0FFh
+    mov RxFrameValid,al ;mark frame as valid
+    jmp NewRxBit_ret
+
+BadCRCFrame:                ;shall we really count bad CRC packets
+                            ;as "errors_in" ?
+
+    mov bx,offset errors_in ;increment "errors_in"
+    call inc_dword_bx
+
+    jmp PrepareNewFrame     ;abort current frame and make ready for new one
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: DoUpCall
+;     PURPOSE:
+;      SYNTAX:
+; DESCRIPTION:
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+DoUpCall:                       ;input: RxFrameData contains a valid packet (CRC is OK)
+                                ;RxFrameLen contains its length
+    push ds
+    push es
+    push si
+    push di
+
+    mov bx,offset packets_in    ;increment input packet counter
+    call inc_dword_bx
+
+    mov cx,RxFrameLen           ;load packet length
+    sub cx,2                    ;exclude CRC
+
+    mov ax,cx                   ;increment input bytes counter by packet length
+    mov bx,offset bytes_in
+    call inc_dword_bx_by_ax
+
+    mov ax,receive_upcall       ;is there a valid upcall address ?
+    or ax,receive_upcall+2
+    jz drop_packet              ;jump if there is not
+
+    mov ax,0                    ;flag=0 - first upcall
+    mov bx,0                    ;handle = 0
+    mov di,0                    ;set es:di = NULL
+    mov es,di
+    call dword ptr [receive_upcall] ;first upcall
+    mov ax,es                   ;check if application returned
+    or ax,di                    ;valid buffer pointer
+    jz drop_packet              ;jump if not
+;   jz DoUpCall_ret
+
+    mov si,di                   ;make si=di before we alter di (for second upcall)
+    mov bx,offset RxFrameData   ;copy the packet to es:di
+    mov cx,RxFrameLen           ;packet length (exclude CRC)
+    sub cx,2
+CopyLoop: mov al,[bx]           ;loop over packet bytes
+      inc bx                    ;would movsb do the job ?
+      mov es:[di],al
+      inc di
+      loop CopyLoop
+    mov cx,RxFrameLen           ;again packet len for second call
+    sub cx,2                    ;and without CRC
+    mov ax,es                   ;make ds=es (ds not same as cs now !)
+    mov ds,ax
+    mov bx,0                    ;handle 0
+    mov ax,1                    ;flag=1 - second upcall
+    call dword ptr cs:[receive_upcall]  ;second upcall
+;we have to use cs: addressing in above call because we modified ds
+
+DoUpCall_ret:
+    pop di
+    pop si
+    pop es
+    pop ds
+    ret
+
+drop_packet:
+    mov bx,offset packets_dropped   ;increment dropped packet counter
+    call inc_dword_bx
+    jmp DoUpCall_ret
+
+;Note that packets_dropped counts packets refused by the application
+;on the first upcall
+
+;==============================================================
+
+;#+data
+;------------------------------------------------------------------
+;
+;------------------------------------------------------------------
+        even
+save_IER    db 0
+save_LCR    db 0
+save_MCR    db 0
+save_DLL    db 0
+save_DLM    db 0
+save_irq_en db 0FFh ;save irq enabled in 8259
+save_ISR    dw 0,0  ;saved interrupt vector
+;#-data
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: initialize_COM
+;     PURPOSE:
+;      SYNTAX:
+; DESCRIPTION: Save old COM ISR
+;              Set new COM ISR Vector
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+initialize_COM:
+    push ax
+    push dx
+    pushf               ;save CPU interrupt flag
+    cli                 ;disable interrupts
+
+    ;----------------------------
+    ; Save COM interrupt vector
+    ;----------------------------
+    push es
+    push bx
+    mov al,com_irq
+    add al,8
+    mov ah,35h
+    int 21h
+    mov save_ISR,bx
+    mov ax,es
+    mov save_ISR+2,ax
+    pop bx
+    pop es
+
+    ;------------------
+    ; Set new vector
+    ;------------------
+    mov al,com_irq
+    add al,8
+    mov ah,25h
+    mov dx,offset COM_ISR
+    int 21h
+
+    ;----------------------
+    ; Save old IRQ mask and
+    ; set new one
+    ;----------------------
+    mov ah,irq_mask
+    not ah
+    in al,21h           ;read 8259 mask
+    or al,ah            ;extract com irq mask
+    mov save_irq_en,al  ;save it
+    in al,21h           ;enable com irq in 8259
+    and al,ah           ;by clearing the right bit.
+    out 21h,al
+
+    ;------------------
+    ;save COM registers
+    ;------------------
+    mov dx,com_base     ;dx=com_base
+    inc dx              ;dx=IER
+    in al,dx            ;save IER
+    mov save_IER,al
+    xor al,al           ;disable all COM interrupts
+    out dx,al
+
+    add dx,2            ;dx=LCR
+    in al,dx            ;save LCR
+    mov save_LCR,al
+
+    inc dx              ;dx=MCR
+    in al,dx            ;save MCR
+    mov save_MCR,al
+
+    dec dx              ;dx=LCR
+    mov al,81h
+    out dx,al           ;enable divisor read/write
+
+    sub dx,3            ;dx=com_base=DLL
+    in al,dx            ;read DLL
+    mov save_DLL,al     ;save it
+
+    inc dx              ;dx=DLM
+    in al,dx            ;read DLM
+    mov save_DLM,al     ;save it
+
+    dec dx              ;dx=com_base=DLL
+    mov ax,bd_slot_time ;set rate divisor
+    out dx,ax           ;to slot_time*bd_bit_len
+
+    add dx,3            ;dx=LCR
+    mov al,01h          ;set 6 data/1 stop/no parity format
+    out dx,al
+
+    inc dx              ;dx=MCR
+    mov al,09h          ;set DTR high, RTS low.
+    out dx,al           ;and OUT2 high
+
+    sub dx,3            ;dx=IER
+    mov al,0Ah
+    out dx,al           ;enable TxEmpty and modem status interrupt
+
+    add dx,4            ;dx=LSR
+    in al,dx            ;read LSR ;to clear possible line status int.
+
+    inc dx
+    in al,dx            ;read MSR to clear possible modem status int
+
+    sub dx,6            ;dx=com_base again
+    in al,dx            ;read Rx buffer
+    in al,dx            ;to clear any possible pending Rx int.
+
+    mov al,000000b      ;load Tx with 000000 char
+    out dx,al
+    out dx,al
+
+    ;------------------------
+    ; restore interrupt flag
+    ;------------------------
+    popf
+    pop dx
+    pop ax
+    ret
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: restore_COM
+;     PURPOSE:
+;      SYNTAX:
+; DESCRIPTION:
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+restore_COM:
+    pushf
+    push ax
+    push dx
+    cli
+
+    ;--------------------------
+    ; Restore interrupt vector
+    ;--------------------------
+    push ds
+    mov al,com_irq
+    add al,8
+    mov ah,25h
+    lds dx,dword ptr save_ISR
+    int 21h
+    pop ds
+
+    ;--------------------
+    ; Restore IRQ mask
+    ;--------------------
+    in al,21h
+    or al,irq_mask
+    and al,save_irq_en
+    out 21h,al
+
+    ;-----------------------
+    ; Restore COM registers
+    ;-----------------------
+    mov dx,com_base
+    in al,dx        ;read Rx to clear a possible int.
+    in al,dx
+    inc dx          ;dx=IER
+    mov al,save_IER ;restore IER
+    out dx,al
+    add dx,2        ;dx=LCR
+    mov al,save_LCR ;restore LCR
+    out dx,al
+    inc dx          ;dx=MCR
+    mov al,save_MCR ;restore MCR
+    out dx,al
+    inc dx          ;dx=LSR
+    in al,dx        ;read LSR to clear possible int.
+    inc dx          ;dx=MSR
+    in al,dx        ;read MSR to clear possible int.
+    sub dx,3        ;dx=LCR
+    in al,dx        ;enable rate divisor access
+    or al,80h
+    out dx,al
+    sub dx,3        ;dx=com_base=DLL
+    mov al,save_DLL ;restore rate divisor
+    out dx,al
+    inc dx          ;dx=DLM
+    mov al,save_DLM
+    out dx,al
+    add dx,2        ;dx=LCR
+    mov al,save_LCR ;restore LCR again
+    out dx,al
+
+    pop dx
+    pop ax
+    popf
+    ret
+
+;#+data
+;-------------------------------------------------------------
+;
+;------------------------------------------------------------------
+even
+TxCountDown dw 0    ;Down counter to measure Tx bits.
+TxState     db 0    ;0 = idle
+                    ;1 = sending head
+                    ;2 = sending usefull data
+                    ;3 = sending tail
+;#-data
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: COM_ISR
+;     PURPOSE: COM interrupt service routine
+;      SYNTAX:
+; DESCRIPTION:
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+COM_ISR:
+    push ax             ;save most often used registers on stack
+    push bx
+    push cx
+    push dx
+    push ds
+
+    mov ax,cs           ; copy cs to ds
+    mov ds,ax
+
+    ;----------------------------------
+    ; Check if COM interrupt is pending
+    ;----------------------------------
+    mov dx,com_base
+    add dx,2            ;dx=IIR
+    in al,dx            ;load IIR
+    test al,000000001b  ;COM interrupt pending ?
+    jnz No_COM_Service  ;jump if not
+
+    ;---------------------------------
+    ; Yes, disable all COM interrupts
+    ;---------------------------------
+    dec dx              ;dx=IER
+    xor al,al
+    out dx,al           ;disable all COM interrupts
+    inc dx
+
+    ;---------------------------------
+    ; now check for possible
+    ; interrupts sources
+    ; (dx=IIR and may not be changed)
+    ;---------------------------------
+    call serv_modem_state   ; Check and handle CTS change
+    call serv_tx_empty      ; Check and handle THRE (Tx data send)
+
+    ;--------------------------------
+    ;tell the interrupt controler
+    ;that interrupt service is done.
+    ;--------------------------------
+    mov al,20h
+    out 20h,al
+
+    ;---------------------------------------------
+    ; enable TxEmpty and Modem Status interrupts
+    ;---------------------------------------------
+    dec dx              ;dx=IER
+    mov al,0Ah
+    out dx,al
+    inc dx
+
+    ;-------------------------------
+    ; Restore saved regs and return
+    ;-------------------------------
+End_ISR:
+    pop ds
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    iret
+
+    ;------------------------------------------------
+    ; No COM interrupt pending.
+    ; Tell Interrupt controller that the interrupt
+    ; service is done and return from this ISR
+    ;------------------------------------------------
+No_COM_service:
+    mov al,20h
+    out dx,al
+    jmp End_ISR
+
+;#+data
+    even
+prev_timer_count dw 0
+;#+data
+
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: serv_modem_state
+;     PURPOSE: Service modem status interrupt
+;      SYNTAX:
+; DESCRIPTION: When called, dx should point to the IIR of the UART
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+serv_modem_state:           ;dx=IIR
+
+    ;--------------------------------------------
+    ; Check if CTS changed state (= incoming data
+    ;--------------------------------------------
+    add dx,4                ;dx=MSR
+    in al,dx                ;read MSR
+    sub dx,4                ;dx=IIR
+    test al,00000001b       ;did CTS change state ?
+    jz serv_modem_state_ret ;jump if not
+
+    ;----------------------------------------------
+    ; CTS has changed state
+    ; Calculate time elapsed from last state change
+    ;-----------------------------------------------
+    xor al,al               ;read system timer count
+    out 43h,al
+    in al,40h
+    xchg al,ah
+    in al,40h
+    xchg al,ah              ;Timer value in ax now
+    mov bx,ax               ;subtract previous count (Timer counts _down_ !)
+    xchg ax,prev_timer_count
+    sub ax,bx               ;so now ax contains the period elapsed
+    shr ax,1
+    call StoreRxPeriod      ;Store measured period in circular buffer
+    call UpdateDataStat     ;Update data status information
+
+serv_modem_state_ret:
+    ret         ;dx=IIR again
+
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: serv_tx_empty
+;     PURPOSE: Service Transmitter Holding Register empty...
+;      SYNTAX: in: dx = IIR
+; DESCRIPTION:
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+serv_tx_empty:              ;dx=IIR
+    add dx,3                ;dx=LSR
+    in al,dx
+    sub dx,3                ;dx=IIR
+    test al,00100000b       ;THRE ?
+    jz serv_tx_empty_ret    ;No, finish this routine
+      mov bx,2              ;for faster add/sub dx,2
+      sub dx,bx             ;dx=TxData
+      xor al,al             ;AL = 0
+      out dx,al             ;load Tx with 0000000 char
+      add dx,bx             ;dx=IIR
+      call [word ptr ServTx];bx=2, dx must _not_ be modified
+
+serv_tx_empty_ret:
+    ret
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: ServTxIdle
+;     PURPOSE:
+;      SYNTAX:
+; DESCRIPTION:
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+    even
+ServTx  dw ServTxIdle       ;Pointer to function
+
+ServTxIdle:                 ;here a decision about pushing PTT should be taken
+    call Randomize          ;but first update RandomByte
+    call TxBufferEmpty      ;any data to transmit ?
+    jz   ClearStat          ;jump if not
+    call TxPTTDecision      ;ask PTT decision circuit for permision
+    jnc  ClearStat          ;jump if no permition
+                            ;decision positive - enter transmit mode
+    add dx,2                ;dx=MCR
+    in  al,dx
+    or  al,2                ;set RTS high
+    out dx,al               ;thus activate PTT
+    dec dx                  ;dx=LCR
+    mov bl,bd_bit_len       ;bx=bit length in baud divisor units
+    xor bh,bh
+    call SetTxBaudDiv_bx    ;set baud generator to 1 bit len.
+    dec dx                  ;dx=IIR
+    mov ax,tx_head          ;initialize count down
+    mov TxCountDown,ax      ;with Tx head len
+    mov ServTx,offset ServTxHead    ;Transmitter state is "head"
+    ret
+
+ClearStat:
+    call ClearDataStat
+    ret
+
+;--#+data----------------------------------------------------------------
+;
+;--#-data----------------------------------------------------------------
+    even
+Tx8bit     dw 0
+NextTxBit  db 0
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: ServTxHead
+;     PURPOSE:
+;      SYNTAX:
+; DESCRIPTION:
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+ServTxHead:
+
+    ;-----------------------
+    ; Flip state of DTR pin
+    ;-----------------------
+    add dx,bx                       ;dx=MCR
+    in al,dx                        ;flip DTR
+    xor al,1
+    out dx,al
+    sub dx,bx                       ;dx=IIR
+    dec TxCountDown
+    jnz ServTxHead_ret
+      mov ServTx,offset ServTxData  ;enter data phase
+      jmp ReadNext8bit
+ServTxHead_ret:
+    ret
+
+ServTxData:
+    add dx,bx           ;dx=MCR
+    in al,dx            ;flip DTR if next bit is 1
+    xor al,NextTxBit
+    out dx,al
+    sub dx,bx           ;dx=IIR
+    mov ax,Tx8bit       ;save bit counter and 8bit buffer
+    dec ah              ;decrement bit counter
+    jz ReadNext8bit     ;jump if zero
+    ror al,1            ;rotate 8bit buffer
+    mov Tx8Bit,ax       ;save it
+    and al,1            ;extract lowest bit
+    mov NextTxBit,al    ;save it
+    ret
+ReadNext8bit:
+    call ReadTx8bit     ;Read next 8 bits
+    jnc TxStartTail     ;jump if buffer empty
+    mov ah,8            ;bit counter = 8
+    not al              ;invert data bits
+    mov Tx8Bit,ax       ;save bit counter and 8bit buffer
+    and al,1            ;leave lowest bit only
+    mov NextTxBit,al
+    ret
+TxStartTail:
+    mov ax,tx_tail      ;load count down with tx tail length
+    mov TxCountDown,ax
+    mov ServTx,offset ServTxTail
+    ret
+
+ServTxTail:             ;bx=2 at entry
+    add dx,bx           ;dx=MCR
+    in al,dx            ;flip DTR
+    xor al,1
+    out dx,al
+    sub dx,bx           ;dx=IIR
+    dec TxCountDown
+    jnz ServTxTail_ret
+      add dx,bx         ;dx=MCR
+      in al,dx
+      or al,1           ;set DTR high
+      and al,0FDh       ;and RTS low
+      out dx,al
+      dec dx            ;dx=LCR
+      mov bx,bd_slot_time   ;set TxEmpty interrupt rate to slot time
+      call SetTxBaudDiv_bx
+      dec dx                ;dx=IIR
+      mov ServTx,offset ServTxIdle
+      call ClearDataStat    ;clear statistics for DCD
+ServTxTail_ret:
+    ret
+
+;SetTxBaudDiv:          ;input: al=period in bits, dx=LCR
+;   mov ah,bd_bit_len
+;   mul ah
+;   mov bx,ax           ;save new baud
+
+SetTxBaudDiv_bx:        ;input: bx=divisor value, dx=LCR
+    mov al,81h          ;enable divisor access
+    out dx,al
+    sub dx,3            ;dx=DLL
+    mov ax,bx           ;write in new baud rate
+    out dx,ax
+    add dx,3            ;dx=LCR again
+    mov al,01h          ;disable divisor access
+    out dx,al
+    ret                 ;output: dx=LCR, ax,bx modified
+
+RandomWord dw 079BDh    ;random number for p-persistance algorithm
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: Randomize
+;     PURPOSE: Make random number
+;      SYNTAX: Call Randomize
+; DESCRIPTION: Generates random word by reading the system timer and
+;              perform some calculations on it.
+;     RETURNS: out: RandomWord contains new random word
+;                   ax,bx and cx are modified
+;     HISTORY: -
+;--#-func----------------------------------------------------------------
+Randomize:              ;make new random number
+    mov cx,dx           ;save dx
+    xor al,al           ;read system timer count
+    out 43h,al
+    in al,40h           ;low byte
+    xchg al,ah
+    in al,40h           ;high byte
+    xchg al,ah          ;timer value in ax now
+    add ax,RandomWord   ;add previous random word
+    mov bx,65521        ;multiply by 65521
+    mul bx              ;dx:ax = ax * bx
+    xor ax,dx
+    mov RandomWord,ax   ;save random word
+    mov dx,cx           ;restore dx
+    ret                 ;ax,bx,cx modified
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: TxPTTDecision
+;     PURPOSE: Decide whether to push PTT now
+;      SYNTAX: in: dx = IIR
+; DESCRIPTION:
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+TxPTTDecision:
+
+    mov al,carrier_sense
+    and al,al               ;Full duplex ?
+    jz PushPTT              ;jump if so
+    call sense_carrier      ;Is somebody else transmiting ?
+    jc DontPushPTT          ;jump if so
+
+    ;------------------------------
+    ;now comes the p-persistance...
+    ;------------------------------
+    mov ax,RandomWord       ;ax=pseudo-random word
+    xor ah,al               ;ah=pseudo-random byte
+    mov al,persistance      ;al=persistance
+    cmp ah,al               ;carry when ah<persistance
+    ret
+
+    ;-------------------
+    ; Push PTT
+    ;-------------------
+PushPTT:
+    stc
+    ret
+
+    ;-------------------
+    ; Dont push PTT
+    ;-------------------
+DontPushPTT:
+    clc
+    ret
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: sense_carrier
+;     PURPOSE:
+;      SYNTAX: in: al = carrier mode
+;                  dx = MCR
+;              out: carry = carrier state
+; DESCRIPTION:
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+sense_carrier:
+    cmp al,1        ;sense DCD line ?
+    jz sense_DCD
+    cmp al,2        ;sense data transition
+    jz sense_DataTrans
+    cmp al,3        ;be more clever ?
+    jz sense_data
+    clc             ;otherwise just say carrier=false
+    ret
+
+sense_DCD:
+    add dx,4        ;dx=MSR
+    in al,dx        ;read MSR
+    sub dx,4        ;dx=IIR
+    rcl al,1        ;carry=DCD state
+    ret
+
+sense_DataTrans:
+    xor ax,ax       ;at least one data transition
+    cmp ax,DataTransCount   ;since previous time slot ?
+    ret             ;carry=1 if so
+
+sense_data:
+    mov bx,DataTransCount
+    cmp bx,2        ;more than 1 transitions counted ?
+    jc few_trans    ;jump if not
+    mov cx,dx       ;save dx
+    mov ax,PeriodDevSum ;compute sum/count that is the average
+    mov dx,PeriodDevSum+2
+    div bx          ;ax=periodDevSum div DataTransCount
+    mov bx,cl_bit_len_2
+    shr bx,1
+    shr bx,1        ;bx = 1/8 of the bit period
+    cmp ax,bx       ;is the average bigger than 1/8 of the bit period ?
+    mov dx,cx       ;restore dx
+    ret             ;carry=0 (no carrier) if so
+few_trans:
+    clc             ;say carrier=false if there were only few transitions
+    ret
+
+;#+data
+ even
+DataTransCount  dw 0        ;count input signal transitions
+PeriodDevSum    dw 0,0      ;sums period deviations from round bit lenghts
+;#-data
+
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: ClearDataStat
+;     PURPOSE: Clear statistics for DCD
+;      SYNTAX:
+; DESCRIPTION:
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+ClearDataStat:
+    xor ax,ax               ; ax = 0
+    mov DataTransCount,ax   ; DataTransCount = 0
+    mov PeriodDevSum,ax     ; PeriodDevSum   = 0
+    mov PeriodDevSum+2,ax
+    ret
+
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: UpdateDataStat
+;     PURPOSE:
+;      SYNTAX: in: ax = period
+; DESCRIPTION: 1) Increments data transition counter
+;              2) If carrier mode 3, then data analysis will calculate
+;                 the period deviation (summed)
+;     RETURNS: ax,bx modified
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+UpdateDataStat:             ;input: ax=period
+    inc DataTransCount      ;increment data transition counter
+    mov bl,carrier_sense    ;check carrier mode
+    cmp bl,3                ;execute the rest only if carrier mode is 3
+    jnz UpdateDataStat_ret  ;(mode 3 = deliver from data analysis)
+
+    ;-------------------------------
+    ; Data analysis of PeriodDevSum
+    ;-------------------------------
+    push dx                 ;save DX
+    xor dx,dx               ;DX = 0
+    add ax,cl_bit_len_2     ;period+=cl_bit_len/2
+    mov bx,cl_bit_len
+    div bx                  ;dx=period div cl_bit_len
+    shr bx,1                ;bx=cl_bit_len/2
+    sub dx,bx               ;dx-=cl_bit_len/2
+    jnc UpdateDevSum        ;if result negative
+      neg dx                ;then negate dx
+UpdateDevSum:
+    xor ax,ax               ;add dx to PeriodDevSum
+    add PeriodDevSum,dx     ;PeriodDevSum sums deviation of periods
+    adc PeriodDevSum+2,ax   ;from multiple bit lengths
+    pop dx                  ;restore DX
+
+UpdateDataStat_ret:         ;Return from subroutine with
+    ret                     ;ax,bx modified
+
+;#+data ****************************************************************
+    even
+TxBufferLen equ 4095            ;Tx buffer length in bytes - must be 2^n-1
+TxBuffer db TxBufferLen+1 dup(0);Tx buffer storage
+                                ;this buffer is filled by send_pkt routine
+                                ;and flushed by TxEmpty service routine
+                                ;when tx is in data phase
+                                ;buffer pointers
+TxReadPtr  dw 0                 ;points to next byte to read
+TxWritePtr dw 0                 ;points to successor of the last valid byte
+TxBlockPtr dw 0                 ;Tmp pointer while writing in data block
+                                ;this is to ensure that only complete blocks
+                                ;will be transmitted
+;#-data ********************************************************************
+
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: WriteTx8bit
+;     PURPOSE:
+;      SYNTAX: in: al = byte to write
+; DESCRIPTION:
+;     RETURNS: Z set = buffer full
+;              Registers are unchanged
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+WriteTx8bit:
+    push bx
+    mov bx,TxBlockPtr       ;load block end pointer
+    mov [TxBuffer+bx],al    ;store byte
+    inc bx                  ;increase pointer
+    and bx,TxBufferLen      ;and flip it around
+    cmp bx,TxReadPtr        ;same as read ptr ?
+    jz WriteTx_ret          ;jump if so
+    mov TxBlockPtr,bx
+WriteTx_ret:
+    pop bx
+    ret
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: ValidateTxBlock
+;     PURPOSE: Make write pointer same as block pointer
+;      SYNTAX:
+; DESCRIPTION: Registers will not be changed
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+ValidateTxBlock:
+    push bx
+    mov bx,TxBlockPtr
+    mov TxWritePtr,bx
+    pop bx
+    ret
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: CancelTxBlock
+;     PURPOSE:
+;      SYNTAX:
+; DESCRIPTION: Makes block pointer same as write pointer
+;     RETURNS: Nothing, registers unchanged
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+
+CancelTxBlock:
+    push bx
+    mov bx,TxWritePtr
+    mov TxBlockPtr,bx
+    pop bx
+    ret
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: ReadTx8Bit
+;     PURPOSE:
+;      SYNTAX:
+; DESCRIPTION:
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+ReadTx8bit:
+    mov bx,TxReadPtr        ;load read pointer
+    cmp bx,TxWritePtr       ;same as write pointer ?
+    jz ReadTx_ret           ;jump if so
+      mov al,[TxBuffer+bx]  ;read data into AL
+      inc bx                ;increment the read pointer
+      and bx,TxBufferLen    ;and flip it around
+      mov TxReadPtr,bx      ;save it
+      stc                   ;set carry
+ReadTx_ret:
+    ret                     ;if carry is 0 => buffer was empty
+                            ;bx is modified but this does not matter really
+
+    even
+Tx8bitBuffer dw 8000h
+
+AddTxBit:           ;input: bh=8bit reg., bl=1s counter
+    inc bl          ;increment 1s counter
+    jc AddTxBit_1
+      mov bl,0      ;clear counter when 0 bit
+AddTxBit_1:
+    rcr bh,1        ;shift the bit into 8bit reg.
+    jnc AddTxBit_ret
+      mov al,bh     ;write reg. into buffer
+      call WriteTx8bit
+      jz AddTxBit_err
+      mov bh,80h
+AddTxBit_ret:
+    clc         ;clear carry => no problems
+    ret
+AddTxBit_err:
+    stc             ;set carry => buffer overflow
+    ret
+
+TxFlush8bit:
+    push ax
+    mov ax,Tx8bitBuffer
+    mov al,ah
+    and al,al
+    jz TxFlush_ret
+    clc
+TxFlush_l:
+    rcr al,1
+    jnc TxFlush_l
+    call WriteTx8bit
+TxFlush_ret:
+    mov ax,8000h
+    mov Tx8bitBuffer,ax
+    pop ax
+    ret     ;output: Z=1 means tx buffer overflow
+
+AddTxByteDirect:    ;input: ah=byte to add
+    push ax
+    push bx
+    push cx
+    mov bx,Tx8bitBuffer
+    mov cx,8
+AddNextBit:
+      ror ah,1
+      call AddTxBit
+      jc AddTxByte_ret
+    loop AddNextBit
+AddTxByte_ret:
+    mov Tx8bitBuffer,bx
+    pop cx
+    pop bx
+    pop ax
+    ret     ;output: carry=1 if buffer overflow
+
+AddTxByteStuffing:      ;input: ah=byte to append _with_ bit stuffing
+    push ax
+    push bx
+    push cx
+    mov bx,Tx8bitBuffer
+    mov cx,8
+AddNextBitS:            ;loop over bits
+      ror ah,1      ;copy next bit to carry flag
+      call AddTxBit
+      jc AddTxByteS_ret
+      cmp bl,5
+      jc AddTxByteS_l
+        clc         ;if more than 5 1s in a row
+        call AddTxBit   ;append an extra 0 bit
+        jc AddTxByteS_ret   ;jump if buffer overflow
+AddTxByteS_l:
+    loop AddNextBitS
+    clc
+AddTxByteS_ret:
+    mov Tx8bitBuffer,bx
+    pop cx
+    pop bx
+    pop ax
+    ret         ;output: carry=1 means buffer overflow
+
+
+TxBufferEmpty:
+    mov bx,TxReadPtr
+    cmp bx,TxWritePtr
+    ret     ;Z=1 means buffer is empty
+        ;bx is modified
+
+;--#+data----------------------------------------------------------------
+;
+;
+;--#-data----------------------------------------------------------------
+    even                            ;align buffer to word boudary
+RxBufferLen equ 1023                ;in words, must be 2^n-1
+RxBuffer   dw RxBufferLen+1 dup(0)  ;Rx buffer storing periods between
+                                    ;CTS transitions
+                                    ;this buffer is filled by CTS transitions
+                                    ;interrupt routine and flushed
+                                    ;by system timer service routine
+RxReadPtr  dw 0                     ;read pointer
+RxWritePtr dw 0                     ;write pointer
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: StoreRxPeriod
+;     PURPOSE: Store the period, elapsed since the last state change
+;              of the CTS signal in a circular buffer (RxBuffer)
+;      SYNTAX:
+; DESCRIPTION: this routine discards the oldest period when
+;              the buffer overflows
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+StoreRxPeriod:              ;must not modify dx,cx
+    mov [RxBuffer+bx],ax    ;store the period
+    add bx,2                ;increment the pointer
+    and bx,2*RxBufferLen    ;turn it around if needed
+    mov RxWritePtr,bx       ;save it
+    cmp bx,RxReadPtr        ;same as ReadPtr ?
+    jnz RxStore_ret         ;jump if not
+      mov bx,RxReadPtr
+      add bx,2              ;increment the read pointer
+      and bx,2*RxBufferLen  ;and turn it around
+      mov RxReadPtr,bx
+RxStore_ret:
+    ret
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: ReadRxPeriod
+;     PURPOSE: Read from a circular buffer the first period stored. This
+;              period is the time elapsed between 2 state changes of CTS.
+;      SYNTAX:
+; DESCRIPTION:
+;     RETURNS: if carry is 0 => then buffer was empty
+;              otherwise ax = period
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+ReadRxPeriod:               ;modifies only ax
+    push bx
+    mov bx,RxReadPtr        ;load read pointer
+    cmp bx,RxWritePtr       ;same as write pointer ?
+    jz RxRead_ret           ;jump if so
+      mov ax,[RxBuffer+bx]  ;read the period
+      add bx,2              ;increase the pointer
+      and bx,2*RxBufferLen  ;turn it around
+      mov RxReadPtr,bx      ;save it
+      stc                   ;set carry => data is in ax
+RxRead_ret:
+    pop bx
+    ret
+
+
+;--#+data----------------------------------------------------------------
+;
+;--#-data----------------------------------------------------------------
+;==============================================================
+;CRC computation table and routine
+
+    even
+CRCtable dw     0,  4489,  8978, 12955, 17956, 22445, 25910, 29887
+     dw 35912, 40385, 44890, 48851, 51820, 56293, 59774, 63735
+     dw  4225,   264, 13203,  8730, 22181, 18220, 30135, 25662
+     dw 40137, 36160, 49115, 44626, 56045, 52068, 63999, 59510
+     dw  8450, 12427,   528,  5017, 26406, 30383, 17460, 21949
+     dw 44362, 48323, 36440, 40913, 60270, 64231, 51324, 55797
+     dw 12675,  8202,  4753,   792, 30631, 26158, 21685, 17724
+     dw 48587, 44098, 40665, 36688, 64495, 60006, 55549, 51572
+     dw 16900, 21389, 24854, 28831,  1056,  5545, 10034, 14011
+     dw 52812, 57285, 60766, 64727, 34920, 39393, 43898, 47859
+     dw 21125, 17164, 29079, 24606,  5281,  1320, 14259,  9786
+     dw 57037, 53060, 64991, 60502, 39145, 35168, 48123, 43634
+     dw 25350, 29327, 16404, 20893,  9506, 13483,  1584,  6073
+     dw 61262, 65223, 52316, 56789, 43370, 47331, 35448, 39921
+     dw 29575, 25102, 20629, 16668, 13731,  9258,  5809,  1848
+     dw 65487, 60998, 56541, 52564, 47595, 43106, 39673, 35696
+     dw 33800, 38273, 42778, 46739, 49708, 54181, 57662, 61623
+     dw  2112,  6601, 11090, 15067, 20068, 24557, 28022, 31999
+     dw 38025, 34048, 47003, 42514, 53933, 49956, 61887, 57398
+     dw  6337,  2376, 15315, 10842, 24293, 20332, 32247, 27774
+     dw 42250, 46211, 34328, 38801, 58158, 62119, 49212, 53685
+     dw 10562, 14539,  2640,  7129, 28518, 32495, 19572, 24061
+     dw 46475, 41986, 38553, 34576, 62383, 57894, 53437, 49460
+     dw 14787, 10314,  6865,  2904, 32743, 28270, 23797, 19836
+     dw 50700, 55173, 58654, 62615, 32808, 37281, 41786, 45747
+     dw 19012, 23501, 26966, 30943,  3168,  7657, 12146, 16123
+     dw 54925, 50948, 62879, 58390, 37033, 33056, 46011, 41522
+     dw 23237, 19276, 31191, 26718,  7393,  3432, 16371, 11898
+     dw 59150, 63111, 50204, 54677, 41258, 45219, 33336, 37809
+     dw 27462, 31439, 18516, 23005, 11618, 15595,  3696,  8185
+     dw 63375, 58886, 54429, 50452, 45483, 40994, 37561, 33584
+     dw 31687, 27214, 22741, 18780, 15843, 11370,  7921,  3960
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: CRC pass
+;     PURPOSE:
+;      SYNTAX:
+; DESCRIPTION:
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+CRCpass:            ;input: dx=partial CRC
+    push bx         ;       ah=char to process
+    push ax
+    xor dl,ah
+    mov bl,dl
+    xor bh,bh
+    add bx,bx
+    mov dl,dh
+    xor dh,dh
+    xor dx,[CRCtable+bx]
+    pop ax
+    pop bx
+    ret
+
+;CRC in DX must be initialized with 0FFFFh
+;and inverted after passing through all characters
+;==============================================================
+;here is the installation and de-installation code
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: deinstall_driver
+;     PURPOSE:
+;      SYNTAX:
+; DESCRIPTION:
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+deinstall_driver:
+    mov al,packet_int_no    ;disconnect DRVR_ISR
+    mov ah,25h
+    push ds
+    lds dx,dword ptr old_packet_int
+    int 21h
+    pop ds
+
+    call restore_COM    ;restore COM port state
+                        ;and interrupt vector(s)
+    call Restore_Timer  ;restore Timer interrupt
+
+    push cs             ;free memory
+    pop es
+    mov ah,49h
+    int 21h
+    ret
+
+
+;***********************************************************************
+
+end_resident:       ;all code after this point will not stay resident
+                    ;after the installation is done.
+
+;***********************************************************************
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: Int_is_busy
+;     PURPOSE: Print messsage that there is already a packet driver
+;              installed at the specified software interrupt.
+;              Terminates program, but does NOT stay resident
+;      SYNTAX:
+; DESCRIPTION:
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+Int_is_busy:
+    call Print_following_string
+    db 'There is already a packet driver at interrupt 0x',0
+    mov dl,packet_int_no
+    call Print_DL_hex
+
+DoNotInstall:
+    call Print_following_string
+    db 13,10,'AX25 driver has _not_ been installed',13,10,0
+    mov ax,4C00h    ;terminate but don't stay resident
+    int 21h
+    ret
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: BadUsage
+;     PURPOSE: Print that usage of packet driver is incorrect and
+;              terminate this program (NOT resident)
+;      SYNTAX:
+; DESCRIPTION:
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+BadUsage:
+    call Print_following_string
+    db 13,10,0
+    mov bx,offset Msg_usage
+    call Print_BX_string
+    jmp DoNotInstall
+
+install_driver:
+    call Print_following_string
+    db 'AX25 packet driver for RS232 port by Pawel Jalocha',13,10
+    db 'Version of 30th August 1992',13,10
+    db 'Free licence is granted for radio _amateurs_ only',13,10,13,10,0
+
+    call ReadOptions
+    jnc DoPrintParam
+    jmp BadUsage
+
+DoPrintParam:
+    call PrintParameters
+    call CheckParameters
+    jnc DoComputeSec
+    jmp BadUsage
+
+DoComputeSec:
+    call ComputeSecondaryPar
+
+    push es
+
+    mov al,packet_int_no    ;save int vector
+    mov ah,35h
+    int 21h
+    mov old_packet_int,bx
+    mov ax,es
+    mov old_packet_int+2,ax
+
+    add bx,3                ;check if there is already a packet driver
+    mov di,bx
+    mov si,offset DRVR_ISR +3
+    mov cx,9
+cmp_char:
+    mov al,[si]
+    cmp al,es:[di]
+    jne Int_is_free
+    loop cmp_char
+    jmp Int_is_busy
+
+Int_is_free:
+
+    mov al,packet_int_no    ;put a new one in place
+    mov ah,25h
+    mov dx,offset DRVR_ISR
+    int 21h                 ;ds must be equal to cs here
+
+    mov es,phd_environ      ;release our environment
+    mov ah,49h
+    int 21h
+
+    pop es
+
+    ;---------------------------------------------
+    ; Initialize COM port and interrupt vector(s)
+    ; Initialize Timer routine
+    ;---------------------------------------------
+    call initialize_COM
+    call Initialize_Timer
+
+    ;------------------------------------
+    ; Show the driver has been installed
+    ;------------------------------------
+    call Print_following_string
+    db 'AX25 driver is now installed and initialized',13,10,0
+
+    ;------------------------
+    ; Make the code resident
+    ;------------------------
+    mov ax,3100h
+    mov dx,offset end_resident + 0Fh
+    mov cl,4
+    shr dx,cl
+    int 21h
+    ret
+
+;#+data
+
+Msg_usage:
+    db 'ax25 options: (default values in [])',13,10
+    db '-?  prints this help message',13,10
+    db '-i<int_no>(hex) software interrupt number [60]',13,10
+    db '-I<irq>(hex)    COM IRQ number 2..7 [4]',13,10
+    db '-B<base>(hex)   COM base address 0..3ff [3f8]',13,10
+    db '-b<bit rate>(dec) [1200]',13,10
+    db '-c<carrier mode> possible values:',13,10
+    db '                   f = full duplex',13,10
+    db '                   c = sense DCD modem line',13,10
+    db '                   t = sense data transitions [default]',13,10
+    db '                   d = deliver carrier signal from data analysis',13,10
+    db '-s<slot time>(dec) slot time in data bits [120]',13,10
+    db '-p<peristance>(dec) persistance/255 [64]',13,10
+    db '-h<tx head>(dec)  Transmitter head in data bit units [480]',13,10
+    db '-t<tx tail>(dec)  transmitter tail in data bit units [24]',13,10
+    db 0
+;#-data
+
+
+;==============================================================
+;Here are some routine for printing numbers and strings
+
+print_following_string: ;prints string following the call - modifies bx !
+    pop bx      ;pop return address from the stack
+    push ax     ;so we know where the char. string is
+    push dx
+print_next_char:
+      mov dl,cs:[bx]    ;load next character
+      inc bx
+      and dl,dl             ;NULL char ?
+      jz string_end         ;exit this loop if so
+      mov ah,2              ;otherwise print it
+      int 21h
+    jmp print_next_char
+string_end:
+    pop dx
+    pop ax
+    push bx         ;push new return address on stack
+    ret
+print_BX_string:    ;prints string addressed by ds:bx
+    push ax     ;the string must be terminated by NULL char
+    push bx
+    push dx
+print_next_BX_char:     ;loop over characters
+      mov dl,[bx]       ;read next character
+      inc bx
+      and dl,dl         ;NULL char ?
+      jz BX_string_end      ;jump if so
+      mov ah,2              ;otherwise print it
+      int 21h
+    jmp print_next_BX_char
+BX_string_end:
+    pop dx
+    pop bx
+    pop ax
+    ret
+
+print_DL_hex:       ;prints in hex byte stored in DL
+    push ax
+    push cx
+    mov cl,4
+    jmp print_low_byte
+print_DX_hex:       ;prints in hex word stored in DX
+    push ax
+    push cx
+    mov cl,4
+    mov al,dh
+    rol al,cl
+    call print_hex_digit
+    rol al,cl
+    call print_hex_digit
+print_low_byte:
+    mov al,dl
+    rol al,cl
+    call print_hex_digit
+    rol al,cl
+    call print_hex_digit
+    pop cx
+    pop ax
+    ret
+
+print_hex_digit:    ;prints hex digit stored in AL
+    push ax
+    push dx
+    and al,0Fh
+    cmp al,10
+    jc add_0
+    add al,'a'-'0'-10
+add_0:  add al,'0'
+    mov dl,al
+    mov ah,2
+    int 21h
+    pop dx
+    pop ax
+    ret
+
+print_DX_dec:       ;print in dec word stored in DX
+    push ax
+    push bx
+    push cx
+    push dx
+    mov bx,10
+    xor cx,cx
+    mov ax,dx
+calc_next_dig:
+    xor dx,dx
+    div bx
+    push dx
+    inc cx
+    and ax,ax
+    jnz calc_next_dig
+print_next_dig:
+    pop ax
+    call print_dec_digit
+    loop print_next_dig
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
+print_dec_digit:    ;prints in dec digit stored in AL
+    push ax
+    push dx
+    add al,48
+    mov dl,al
+    mov ah,2
+    int 21h
+    pop dx
+    pop ax
+    ret
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION:
+;     PURPOSE:
+;      SYNTAX:
+; DESCRIPTION:
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+;==============================================================
+;Routines to interprete input
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: ReadOptions
+;     PURPOSE: Read command line arguments and interprete them
+;      SYNTAX:
+; DESCRIPTION:
+;     RETURNS: ;carry=1 => results are _not_ valid
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+ReadOptions:
+    push ax
+    push bx
+    push cx
+    push dx
+    mov bx,81h              ;load offset to command line arguments
+NextOption:
+    call SkipBlanks
+    cmp al,13               ;carriage return ?
+    jz ReadOptions_ret      ; end of option list
+    cmp al,'-'
+    jz InterpreteOption
+
+PrintOptionUsage:
+;   mov bx,offset Msg_usage
+;   call Print_BX_string
+
+ReadOptions_err:
+    stc                     ;Set error flag (carry = 1)
+
+ReadOptions_ret:
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: InterpreteOption
+;     PURPOSE: Interprete option given on the command line
+;      SYNTAX:
+; DESCRIPTION: bx is offset to command line parameters
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+InterpreteOption:
+
+    ;--------------------
+    ; Get option
+    ;--------------------
+    inc bx
+    mov al,[bx]
+    inc bx
+
+    ;--------------------------
+    ; Check if option is known
+    ;--------------------------
+    cmp al,'?'             ; Print Usage
+    jz PrintOptionUsage
+    cmp al,'B'             ; Base address of COM UART
+    jz Opt_base
+    cmp al,'I'             ; IRQ number
+    jz Opt_irq
+    cmp al,'i'             ; Packet interrupt number
+    jz Opt_interrupt
+    cmp al,'b'             ; baudrate
+    jz Opt_baud
+    cmp al,'c'             ; Carrier mode
+    jz Opt_carrier
+    cmp al,'s'             ; Slot time
+    jz Opt_slot
+    cmp al,'p'             ; Persistance
+    jz Opt_persistance
+    cmp al,'h'             ; Tx head length
+    jz Opt_head
+    cmp al,'t'             ; Tx tail length
+    jz Opt_tail
+
+    ;-------------------------------------
+    ; Unknown option, print error message
+    ;-------------------------------------
+    call UnknownOption
+    jmp ReadOptions_err
+
+Opt_base:
+    call ReadHexNumber
+    mov com_base,dx
+    jmp NextOption
+
+Opt_irq:
+    call ReadHexNumber
+    mov com_irq,dl
+    jmp NextOption
+
+Opt_interrupt:
+    call ReadHexNumber
+    mov packet_int_no,dl
+    jmp NextOption
+
+Opt_baud:
+    call ReadDecNumber
+    mov bit_rate,dx
+    jmp NextOption
+
+Opt_slot:
+    call ReadDecNumber
+    mov slot_time,dl
+    jmp NextOption
+
+Opt_persistance:
+    call ReadDecNumber
+    mov persistance,dl
+    jmp NextOption
+
+Opt_head:
+    call ReadDecNumber
+    mov tx_head,dx
+    jmp NextOption
+
+Opt_tail:
+    call ReadDecNumber
+    mov tx_tail,dx
+    jmp NextOption
+
+Opt_carrier:
+    mov al,[bx]
+    cmp al,'f'
+    jz Carr_0
+    cmp al,'c'
+    jz Carr_1
+    cmp al,'t'
+    jz Carr_2
+    cmp al,'d'
+    jz Carr_3
+    call UnknownCarrierOpt
+    jmp ReadOptions_err
+
+Opt_carr_end:
+    inc bx
+    mov Carrier_sense,al
+    jmp NextOption
+
+Carr_0: mov al,0
+    jmp Opt_carr_end
+
+Carr_1: mov al,1
+    jmp Opt_carr_end
+
+Carr_2: mov al,2
+    jmp Opt_carr_end
+
+Carr_3: mov al,3
+    jmp Opt_carr_end
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: UnknownCarrierOpt
+;     PURPOSE: Print message stating carrier option is unknown.
+;      SYNTAX:
+; DESCRIPTION:
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+UnknownCarrierOpt:
+    push bx
+    call Print_following_string
+    db 'Unknown option: -c',0
+    mov dl,al
+    mov ah,2
+    int 21h
+    call Print_following_string
+    db 13,10,0
+    pop bx
+    ret
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: UnknownOption
+;     PURPOSE: Print message with unknown program option
+;      SYNTAX:
+; DESCRIPTION:
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+UnknownOption:
+    push bx
+    call Print_following_string
+    db 'Unknown option: -',0
+    mov dl,al
+    mov ah,2
+    int 21h
+    call Print_following_string
+    db 13,10,0
+    pop bx
+    ret
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: SkipBlanks
+;     PURPOSE: Move to first non-SPACE or TAB char
+;      SYNTAX: in: ds:bx = pointer to string
+;              out: ds:bx = address of non-blank character
+;                      al = this character
+; DESCRIPTION:
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+SkipBlanks:
+SkipThisChar:
+    mov al,[bx]
+    inc bx
+    cmp al,' '      ;space ?
+    jz SkipThisChar
+    cmp al,9        ;TAB ?
+    jz SkipThisChar
+    dec bx
+    ret
+
+
+Param_OK db 0
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: CheckParameters
+;     PURPOSE:
+;      SYNTAX:
+; DESCRIPTION:
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+CheckParameters:
+    push bx
+    push ax
+    mov al,1
+    mov Param_OK,al
+
+;   mov al,packet_int_no
+;   cmp al,60h
+;   jnc int_no_OK
+;     call Print_following_string
+;     db 'Packet interrupt number is below 0x60',13,10,0
+;     xor al,al
+;     mov Param_OK,al
+;int_no_OK:
+
+    ;----------------------------------
+    ; Check lower baudrate limit (300)
+    ;----------------------------------
+    mov ax,bit_rate
+    cmp ax,300
+    jnc baud_upp
+      call Print_following_string
+      db 'Bauds below 300 bps not supported',13,10,0
+      xor al,al
+      mov Param_OK,al
+
+    ;------------------------------------
+    ; Check upper baudrate limit (14000)
+    ;------------------------------------
+baud_upp:
+    cmp ax,14400+1
+    jc baud_OK
+      call Print_following_string
+      db 'Bauds above 14400 bps not supported',13,10,0
+      xor al,al
+      mov Param_OK,al
+
+    ;-------------------------
+    ; Check length of Tx head
+    ;-------------------------
+baud_OK:
+    mov ax,tx_head
+    cmp ax,8
+    jnc tx_head_OK
+      call Print_following_string
+      db 'Tx head should be at least 8 bits',13,10,0
+      xor al,al
+      mov Param_OK,al
+
+    ;-------------------------
+    ; Check length of Tx tail
+    ;-------------------------
+tx_head_OK:
+    mov ax,tx_tail
+    cmp ax,8
+    jnc tx_tail_OK
+      call Print_following_string
+      db 'Tx tail should be at least 8 bits',13,10,0
+      xor al,al
+      mov Param_OK,al
+tx_tail_OK:
+
+    ;---------------------------
+    ; Check length of slot time
+    ;---------------------------
+    mov al,slot_time
+    cmp al,8
+    jnc slot_time_OK
+      call Print_following_string
+      db 'Slot time should be at least 8 bits',13,10,0
+      xor al,al
+      mov Param_OK,al
+slot_time_OK:
+
+    ;-----------------------
+    ; Check address of UART
+    ;-----------------------
+    mov ax,com_base
+    cmp ax,400h
+    jc com_base_OK
+      call Print_following_string
+      db 'COM base address should be in the range 0..3ff',13,10,0
+      xor al,al
+      mov Param_OK,al
+com_base_OK:
+
+
+    ;--------------------
+    ; Check IRQ number
+    ;--------------------
+    mov al,com_irq
+    cmp al,2
+    jnc com_irq_upp
+wrong_irq:
+      call Print_following_string
+      db 'COM irq should be between 2 and 7',13,10,0
+      xor al,al
+      mov Param_OK,al
+      jmp com_irq_OK
+com_irq_upp:
+      cmp al,8
+      jnc wrong_irq
+com_irq_OK:
+
+    mov al,Param_OK
+    shr al,1
+    cmc
+    jnc CheckParam_ret
+    call Print_following_string
+    db 'ax25 driver can not accept these parameters',13,10,0
+    stc
+CheckParam_ret:
+    pop bx
+    pop ax
+    ret
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: ComputeSecondaryPar
+;     PURPOSE: Compute Secondary Parameters
+;      SYNTAX:
+; DESCRIPTION:
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+ComputeSecondaryPar:
+
+    ;--------------------
+    ; Save registers
+    ;--------------------
+    push ax
+    push bx
+    push cx
+    push dx
+
+    ;--------------------
+    ; Calc IRQ mask
+    ;--------------------
+    mov al,1
+    mov cl,com_irq
+    shl al,cl
+    mov irq_mask,al
+
+    ;--------------------
+    ; Compute bit length
+    ;--------------------
+    mov ax,14400        ;compute baud rate for the transmitter
+    xor dx,dx
+    mov cx,bit_rate
+    mov bx,cx
+    shr bx,1
+    add ax,bx
+    adc dx,0
+    div cx
+    mov bd_bit_len,al
+
+    ;--------------------
+    ; Correct bit length
+    ;--------------------
+    mov ax,14400        ;correct bit rate to a round value
+    xor dx,dx
+    mov cl,bd_bit_len
+    xor ch,ch
+    div cx
+    xchg ax,bit_rate
+    cmp ax,bit_rate
+    jz Compute_cl_bit_len
+      call Print_following_string
+      db 'Bit rate adjusted to ',0
+      mov dx,bit_rate
+      call Print_DX_dec
+      call Print_following_string
+      db ' bps',13,10,0
+
+    ;--------------------
+    ; Compute bitlen/2
+    ;--------------------
+Compute_cl_bit_len:
+    mov ax,13532
+    mov dx,18
+    mov cx,bit_rate
+    mov bx,cx
+    shr bx,1
+    add ax,bx
+    adc dx,0
+    div cx
+    mov cl_bit_len,ax
+    shr ax,1
+    adc ax,0
+    mov cl_bit_len_2,ax
+
+    ;--------------------
+    ; Compute slot time
+    ;--------------------
+    mov ah,bd_bit_len
+    mov al,slot_time
+    mul ah
+    mov bd_slot_time,ax
+
+    ;------------------------------
+    ; Restore registers and return
+    ;------------------------------
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: PrintParameters
+;     PURPOSE:
+;      SYNTAX:
+; DESCRIPTION:
+;     RETURNS:
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+PrintParameters:
+
+    ;--------------------
+    ; Save registers
+    ;--------------------
+    push ax
+    push bx
+    push cx
+    push dx
+
+    call print_following_string
+    db 'Actual ax25 driver parameters:',13,10,0
+
+    call Print_following_string
+    db 'Service interrupt 0x',0
+    mov dl,packet_int_no
+    call Print_DL_hex
+
+    call Print_following_string
+    db 13,10,'COM I/O base 0x',0
+    mov dx,com_base
+    call Print_DX_hex
+
+    call Print_following_string
+    db '  IRQ 0x',0
+    mov dl,com_irq
+    call Print_DL_hex
+
+    call Print_following_string
+    db 13,10,'Bit rate ',0
+    mov dx,bit_rate
+    mov cx,dx           ;keep data rate in cx
+    call Print_DX_dec
+
+    call Print_following_string
+    db ' bps',13,10,'Tx head ',0
+    mov dx,tx_head
+    call Print_DX_dec
+
+    call Print_following_string
+    db ' bits (',0
+    mov ax,1000         ;compute tx_head in ms units
+    mul dx
+    div cx              ;ax=tx_head*1000/bit_rate
+    mov dx,ax
+    call print_DX_dec
+
+    call Print_following_string
+    db 'ms)   Tx tail ',0
+    mov dx,tx_tail
+    call Print_DX_dec
+
+    call Print_following_string
+    db ' bits (',0
+    mov ax,1000         ;compute tx_tail in ms units
+    mul dx
+    div cx              ;ax=tx_tail*1000/bit_rate
+    mov dx,ax
+    call Print_DX_dec
+
+    call Print_following_string
+    db 'ms)',13,10,'Slot time ',0
+    mov dl,slot_time
+    xor dh,dh
+    call Print_DX_dec
+
+    call Print_following_string
+    db ' bits (',0
+    mov ax,1000         ;compute slot_time in ms units
+    mul dx
+    div cx              ;ax=slot_time*1000/bit_rate
+    mov dx,ax
+    call Print_DX_dec
+
+    call Print_following_string
+    db 'ms)   p-persistance ',0
+    mov dl,persistance
+    xor dh,dh
+    call Print_DX_dec
+
+    call Print_following_string
+    db '/255',13,10,'Carrier mode: ',0
+    mov bl,carrier_sense
+    xor bh,bh
+    add bx,bx
+    mov bx,[msg_carrier_modes+bx]
+    call Print_BX_string
+
+    call Print_following_string
+    db 13,10,0
+
+    ;--------------------
+    ; Restore register
+    ;--------------------
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
+
+;#+data
+;------------------------------------------
+;
+;------------------------------------------
+    even
+msg_carrier_modes   label word
+    dw offset Msg_full_duplex
+    dw offset Msg_sense_DCD
+    dw offset Msg_sense_trans
+    dw offset Msg_sense_DPLL
+
+Msg_full_duplex db 'do not sense carrier => full duplex',13,10,0
+Msg_sense_DCD   db 'sense DCD modem line',13,10,0
+Msg_sense_trans db 'sense data transitions',13,10,0
+Msg_sense_DPLL  db 'deliver carrier from data analysis',13,10,0
+;#-data
+
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: ReadDecDigit
+;     PURPOSE:
+;      SYNTAX:
+; DESCRIPTION: ds:bx points to a character
+;     RETURNS: carry=1 if not a dec digit => then al=the character
+;              otherwise al=digit value
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+ReadDecDigit:
+    mov al,[bx]
+    cmp al,'0'
+    jc ReadDecDigit_ret ;jump if below '0'
+      cmp al,'9'+1
+      cmc
+      jc ReadDecDigit_Ret   ;jump if above '9'
+        sub al,'0'
+ReadDecDigit_ret:
+    ret
+
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: ReadDecNumber
+;     PURPOSE: ds:bx points to the first character
+;      SYNTAX:
+; DESCRIPTION:
+;     RETURNS: dx=the number,
+;              ds:bx *char where the interpretation stopped
+;              al=this character, ah possibly modified
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+ReadDecNumber:
+    push cx
+    mov dx,0
+ReadNextDecDigit:
+    call ReadDecDigit
+    jc ReadDecNumber_ret
+      inc bx
+      xor ah,ah
+      add dx,dx     ;multiply dx by 2
+      mov cx,dx     ;multiply dx by 5
+      add dx,dx
+      add dx,dx
+      add dx,cx
+      add dx,ax     ;add the digit just read
+    jmp ReadNextDecDigit
+ReadDecNumber_ret:
+    pop cx
+    ret
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: ReadHexDigit
+;     PURPOSE:
+;      SYNTAX:
+; DESCRIPTION: ds:bx = digit pointer
+;              This routine accepts only _lowercase_ letters as hex
+;              numbers
+;     RETURNS: carry=1 => not a hex digit,  al=char.
+;              carry=0 => hex digit indeed, al=value
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+;the routine below accepts only _lowercase_ letters as hex numbers
+ReadHexDigit:       ;ds:bx = digit pointer
+    mov al,[bx]
+    cmp al,'0'
+    jc ReadHexDigit_ret ;jump if below '0'
+      cmp al,'9'+1
+      cmc
+      jc ReadHexDigit_lett   ;jump if above '9'
+        sub al,'0'
+        jmp ReadHexDigit_ret
+ReadHexDigit_lett:
+    cmp al,'a'
+    jc ReadHexDigit_ret   ;jump if below 'a'
+      cmp al,'f'+1
+      cmc
+      jc ReadHexDigit_ret     ;jump if above 'f'
+        sub al,'a'-10
+ReadHexDigit_ret:
+    ret
+
+
+;--#+func----------------------------------------------------------------
+;    FUNCTION: ReadHexNumber
+;     PURPOSE:
+;      SYNTAX:
+; DESCRIPTION:
+;     RETURNS: dx=the number,
+;              ds:bx *char where the interpretation stopped
+;              al=this character
+;     HISTORY:
+;--#-func----------------------------------------------------------------
+ReadHexNumber:
+    push cx
+    mov cl,4
+    mov dx,0
+ReadNextHexDigit:
+    call ReadHexDigit
+    jc ReadHexNumber_ret
+    inc bx
+    shl dx,cl           ;multiply dx by 16
+    or dl,al            ;add the digit just read
+    jmp ReadNextHexDigit
+ReadHexNumber_ret:
+    pop cx
+    ret
+
+;==============================================================
+
+code    ends
+
+    end start
